@@ -1,0 +1,114 @@
+"use client"
+
+import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { PiAuth } from "@/lib/pi-auth"
+import { useToast } from "@/hooks/use-toast"
+
+interface TipModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  artistName: string
+  trackTitle: string
+}
+
+export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModalProps) {
+  const [loading, setLoading] = useState(false)
+  const [customAmount, setCustomAmount] = useState("")
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
+  const { toast } = useToast()
+
+  const presets = [1, 5, 10, 25]
+
+  const handleTip = async () => {
+    const amount = selectedPreset || Number.parseFloat(customAmount)
+    if (!amount || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid tip amount",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      await PiAuth.createPayment({
+        amount,
+        memo: `Tip for ${trackTitle}`,
+        metadata: { type: "tip", artist: artistName, track: trackTitle },
+      })
+      toast({
+        title: "Tip sent!",
+        description: `You tipped ${amount}π to ${artistName}`,
+      })
+      onOpenChange(false)
+    } catch (error) {
+      toast({
+        title: "Payment failed",
+        description: "Unable to process tip. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Tip {artistName}</DialogTitle>
+          <DialogDescription>Support the artist for {trackTitle}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <div className="grid grid-cols-4 gap-2">
+            {presets.map((amount) => (
+              <Button
+                key={amount}
+                variant={selectedPreset === amount ? "default" : "outline"}
+                onClick={() => {
+                  setSelectedPreset(amount)
+                  setCustomAmount("")
+                }}
+                className="h-14 flex flex-col"
+              >
+                <span className="text-lg font-bold">{amount}π</span>
+              </Button>
+            ))}
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or custom amount</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Input
+              type="number"
+              placeholder="Enter custom amount"
+              value={customAmount}
+              onChange={(e) => {
+                setCustomAmount(e.target.value)
+                setSelectedPreset(null)
+              }}
+              min="0.01"
+              step="0.01"
+            />
+          </div>
+
+          <Button onClick={handleTip} disabled={loading} className="w-full" size="lg">
+            {loading ? "Processing..." : `Send Tip`}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
