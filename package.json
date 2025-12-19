@@ -1,10 +1,11 @@
 {
-  "name": "aurafloor",
+  "name": "aurafloor-nocache-001",
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "./prebuild.sh",
     "dev": "next dev",
-    "build": "npm install --legacy-peer-deps && next build",
+    "build": "npm install --legacy-peer-deps --force && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -17,6 +18,11 @@
     "@radix-ui/react-label": "2.0.2",
     "@radix-ui/react-progress": "1.0.3",
     "@radix-ui/react-radio-group": "1.1.3",
+    "@radix-ui/react-tabs": "1.0.4",
+    "@radix-ui/react-separator": "1.0.3",
+    "@radix-ui/react-slider": "1.1.2",
+    "@radix-ui/react-switch": "1.0.3",
+    "@radix-ui/react-tooltip": "1.0.7",
     "lucide-react": "0.309.0",
     "clsx": "2.0.0",
     "tailwind-merge": "2.2.0"
@@ -31,8 +37,3 @@
     "node": "20.x"
   }
 }
-EOF && \
-mkdir -p components/ui && \
-cat > components/ui/progress.tsx << 'EOF' && \
-"use client"
-export { Root as Progress } from "@radix-ui/react-progress"

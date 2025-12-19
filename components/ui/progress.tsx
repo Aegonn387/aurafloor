@@ -1,2 +1,3 @@
 "use client"
-export { Root as Progress } from "@radix-ui/react-progress"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
+export const Progress = ProgressPrimitive.Root

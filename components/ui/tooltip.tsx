@@ -1,6 +1,5 @@
 "use client"
-export { 
-  Root as Tooltip,
-  Trigger as TooltipTrigger,
-  Content as TooltipContent
-} from "@radix-ui/react-tooltip"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+export const Tooltip = TooltipPrimitive.Root
+export const TooltipTrigger = TooltipPrimitive.Trigger
+export const TooltipContent = TooltipPrimitive.Content
