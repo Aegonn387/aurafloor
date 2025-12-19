@@ -49,3 +49,4 @@
     "node": "20.x"
   }
 }
+    "@radix-ui/react-select": "2.0.0",
