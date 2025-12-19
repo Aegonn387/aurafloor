@@ -1,16 +1,7 @@
 "use client"
-
-import * as React from "react"
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
-
-const DropdownMenu = DropdownMenuPrimitive.Root
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
-const DropdownMenuContent = DropdownMenuPrimitive.Content
-const DropdownMenuItem = DropdownMenuPrimitive.Item
-
-export {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-}
+export { 
+  Root as DropdownMenu,
+  Trigger as DropdownMenuTrigger,
+  Content as DropdownMenuContent,
+  Item as DropdownMenuItem 
+} from "@radix-ui/react-dropdown-menu"
