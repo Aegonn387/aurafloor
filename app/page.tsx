@@ -16,6 +16,7 @@ import { AuthDialog } from "@/components/auth-dialog"
 import { useStore } from "@/lib/store"
 import Link from "next/link"
 
+export const runtime = 'nodejs';
 export default function HomePage() {
   const [tipModalOpen, setTipModalOpen] = useState(false)
   const [selectedTrack, setSelectedTrack] = useState<(typeof mockTracks)[0] | null>(null)
