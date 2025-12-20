@@ -1,4 +1,5 @@
-import { Redis } from "@upstash/redis"
+// lib/redis.ts - EDGE-COMPATIBLE VERSION
+import { Redis } from "@upstash/redis/edge"
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
