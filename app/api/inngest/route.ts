@@ -4,5 +4,5 @@ import { transcodeAudio, distributeAdRevenue, syncBlockchain } from "@/inngest/f
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [transcodeAudio, distributeAdRevenue, syncBlockchain],
+  functions: [transcodeAudio, distributeAdRevenue, syncBlockchain]
 })

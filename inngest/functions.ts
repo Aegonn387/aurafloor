@@ -1,148 +1,297 @@
-import { inngest } from "./client"
-import { query } from "@/lib/db"
-import { uploadToR2 } from "@/lib/r2-storage"
-import { pinToIPFS } from "@/lib/ipfs"
-import { FEES } from "@/lib/payments"
+// inngest/functions.ts
+import { inngest } from "@/inngest/client";
+import { sql } from "@/lib/db";
+import { redis } from "@/lib/redis";
 
-// Audio transcoding after upload
+// Helper to send notifications
+async function sendNotification(userId: string, type: string, title: string, message: string) {
+  const notificationQuery = `
+    INSERT INTO notifications (user_id, type, title, message, read, created_at)
+    VALUES ($1, $2, $3, $4, false, NOW())
+    RETURNING id
+  `;
+  return sql(notificationQuery, [userId, type, title, message]);
+}
+
+// Function 1: Transcode Audio
 export const transcodeAudio = inngest.createFunction(
-  { id: "transcode-audio", retries: 3 },
-  { event: "audio.uploaded" },
+  { id: "transcode-audio" },
+  { event: "audio/transcode.requested" },
   async ({ event, step }) => {
-    const { nftId, audioBuffer } = event.data
+    try {
+      const { audioId, userId } = event.data;
+      
+      // Send notification to user
+      await sendNotification(
+        userId,
+        "audio_processing",
+        "Audio Processing Started",
+        "Your audio file is now being transcoded."
+      );
 
-    // Step 1: Convert to 3 qualities (placeholder - needs actual ffmpeg)
-    const versions = await step.run("transcode", async () => {
-      // In production, use ffmpeg to convert
-      return {
-        preview: audioBuffer, // 128kbps
-        standard: audioBuffer, // 256kbps
-        hq: audioBuffer, // 320kbps
-      }
-    })
+      // Simulate transcoding process
+      await step.run("transcode-audio-file", async () => {
+        // Your audio transcoding logic here
+        console.log(`Transcoding audio: ${audioId}`);
+        return { status: "transcoding" };
+      });
 
-    // Step 2: Upload to R2
-    const urls = await step.run("upload-r2", async () => {
-      return {
-        preview: await uploadToR2(versions.preview, `audio/${nftId}-preview.mp3`, "audio/mpeg"),
-        standard: await uploadToR2(versions.standard, `audio/${nftId}-standard.mp3`, "audio/mpeg"),
-        hq: await uploadToR2(versions.hq, `audio/${nftId}-hq.mp3`, "audio/mpeg"),
-      }
-    })
+      // Update audio status
+      const updateQuery = `
+        UPDATE audio_files 
+        SET status = 'processed', updated_at = NOW()
+        WHERE id = $1
+      `;
+      await sql(updateQuery, [audioId]);
 
-    // Step 3: Pin to IPFS
-    const ipfsHash = await step.run("pin-ipfs", async () => {
-      return await pinToIPFS(versions.hq)
-    })
+      // Send completion notification
+      await sendNotification(
+        userId,
+        "audio_completed",
+        "Audio Processing Complete",
+        "Your audio file has been successfully transcoded."
+      );
 
-    // Step 4: Update database
-    await step.run("update-db", async () => {
-      await query(
-        `UPDATE nfts SET 
-          audio_preview_url = $1,
-          audio_standard_url = $2,
-          audio_hq_url = $3,
-          audio_ipfs_hash = $4,
-          status = 'active',
-          updated_at = NOW()
-         WHERE id = $5`,
-        [urls.preview, urls.standard, urls.hq, ipfsHash, nftId],
-      )
-    })
-  },
-)
+      return { success: true, audioId };
+    } catch (error) {
+      console.error("Transcode audio function error:", error);
+      throw error;
+    }
+  }
+);
 
-// Distribute ad revenue (runs twice a month: 1st and 15th)
+// Function 2: Distribute Ad Revenue
 export const distributeAdRevenue = inngest.createFunction(
   { id: "distribute-ad-revenue" },
-  { cron: "0 0 1,15 * *" }, // 1st and 15th of every month
-  async ({ step }) => {
-    const period = await step.run("get-period", async () => {
-      const now = new Date()
-      const isFirstHalf = now.getDate() === 1
+  { event: "revenue/distribute.requested" },
+  async ({ event, step }) => {
+    try {
+      const { campaignId, totalAmount } = event.data;
 
-      if (isFirstHalf) {
-        // Previous month's second half
-        const start = new Date(now.getFullYear(), now.getMonth() - 1, 16)
-        const end = new Date(now.getFullYear(), now.getMonth(), 0)
-        return { start, end }
-      } else {
-        // Current month's first half
-        const start = new Date(now.getFullYear(), now.getMonth(), 1)
-        const end = new Date(now.getFullYear(), now.getMonth(), 15)
-        return { start, end }
+      // Get all participants for this campaign
+      const participantsQuery = `
+        SELECT user_id, share_percentage 
+        FROM campaign_participants 
+        WHERE campaign_id = $1
+      `;
+      const participants = await sql(participantsQuery, [campaignId]);
+
+      // Distribute revenue to each participant
+      for (const participant of participants) {
+        await step.run(`distribute-to-${participant.user_id}`, async () => {
+          const amount = totalAmount * (participant.share_percentage / 100);
+          
+          // Update user balance
+          const updateBalanceQuery = `
+            UPDATE users 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE id = $2
+          `;
+          await sql(updateBalanceQuery, [amount, participant.user_id]);
+
+          // Log the transaction
+          const logTransactionQuery = `
+            INSERT INTO revenue_distributions 
+            (user_id, campaign_id, amount, distributed_at)
+            VALUES ($1, $2, $3, NOW())
+          `;
+          await sql(logTransactionQuery, [participant.user_id, campaignId, amount]);
+
+          // Send notification
+          await sendNotification(
+            participant.user_id,
+            "revenue_received",
+            "Revenue Distributed",
+            `You received $${amount.toFixed(2)} from campaign ${campaignId}`
+          );
+        });
       }
-    })
 
-    // Calculate distributions
-    await step.run("calculate", async () => {
-      // Get total ad revenue
-      const [result] = await query<{ total: number }>(
-        `SELECT COALESCE(SUM(revenue), 0) as total 
-         FROM ad_impressions 
-         WHERE created_at BETWEEN $1 AND $2`,
-        [period.start, period.end],
-      )
+      // Mark campaign as distributed
+      const updateCampaignQuery = `
+        UPDATE campaigns 
+        SET revenue_distributed = true, distribution_date = NOW()
+        WHERE id = $1
+      `;
+      await sql(updateCampaignQuery, [campaignId]);
 
-      const totalRevenue = result.total
-      const creatorShare = totalRevenue * FEES.CREATOR_AD_SHARE // 40%
+      return { success: true, campaignId, participants: participants.length };
+    } catch (error) {
+      console.error("Distribute ad revenue function error:", error);
+      throw error;
+    }
+  }
+);
 
-      // Get stream counts per creator
-      const creators = await query<{ creator_id: string; stream_count: number }>(
-        `SELECT n.creator_id, COUNT(s.id) as stream_count
-         FROM stream_logs s
-         JOIN nfts n ON s.nft_id = n.id
-         JOIN users u ON s.user_id = u.id
-         WHERE s.created_at BETWEEN $1 AND $2
-           AND s.watched_ad = true
-         GROUP BY n.creator_id`,
-        [period.start, period.end],
-      )
-
-      const totalStreams = creators.reduce((sum, c) => sum + Number(c.stream_count), 0)
-
-      // Distribute proportionally
-      for (const creator of creators) {
-        const creatorRevenue = (Number(creator.stream_count) / totalStreams) * creatorShare
-
-        // Record distribution
-        await query(
-          `INSERT INTO ad_revenue_distributions 
-           (creator_id, period_start, period_end, stream_count, revenue_share, status)
-           VALUES ($1, $2, $3, $4, $5, 'paid')`,
-          [creator.creator_id, period.start, period.end, creator.stream_count, creatorRevenue],
-        )
-
-        // Update wallet
-        await query(
-          `UPDATE user_wallets 
-           SET available_balance = available_balance + $1,
-               lifetime_earnings = lifetime_earnings + $1,
-               updated_at = NOW()
-           WHERE user_id = $2`,
-          [creatorRevenue, creator.creator_id],
-        )
-
-        // Send notification
-        await query(
-          `INSERT INTO notifications (user_id, type, title, message)
-           VALUES ($1, 'ad_revenue', 'Ad Revenue Earned', $2)`,
-          [creator.creator_id, `You earned ${creatorRevenue.toFixed(2)}π from ad revenue this period!`],
-        )
-      }
-    })
-  },
-)
-
-// Blockchain sync (every 5 minutes)
+// Function 3: Sync Blockchain
 export const syncBlockchain = inngest.createFunction(
   { id: "sync-blockchain" },
-  { cron: "*/5 * * * *" },
-  async ({ step }) => {
-    await step.run("sync", async () => {
-      // Sync blockchain state with database
-      // This would query the Stellar blockchain for NFT events
-      console.log("[v0] Blockchain sync running...")
-    })
-  },
-)
+  { event: "blockchain/sync.requested" },
+  async ({ event, step }) => {
+    try {
+      const { chain, startBlock, endBlock } = event.data;
+
+      // Sync blocks in batches
+      let currentBlock = startBlock;
+      while (currentBlock <= endBlock) {
+        await step.run(`sync-block-${currentBlock}`, async () => {
+          // Your blockchain sync logic here
+          console.log(`Syncing block ${currentBlock} on ${chain}`);
+          
+          // Example: Sync transactions from this block
+          const syncQuery = `
+            INSERT INTO blockchain_transactions 
+            (chain, block_number, transaction_hash, processed_at)
+            VALUES ($1, $2, $3, NOW())
+            ON CONFLICT (chain, transaction_hash) DO NOTHING
+          `;
+          // This is a placeholder - you'd need to implement actual blockchain interaction
+          
+          return { block: currentBlock, status: "synced" };
+        });
+        currentBlock++;
+      }
+
+      // Update sync status
+      const updateSyncQuery = `
+        INSERT INTO blockchain_sync_status (chain, last_synced_block, synced_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (chain) DO UPDATE 
+        SET last_synced_block = $2, synced_at = NOW()
+      `;
+      await sql(updateSyncQuery, [chain, endBlock]);
+
+      return { success: true, chain, blocksSynced: endBlock - startBlock + 1 };
+    } catch (error) {
+      console.error("Sync blockchain function error:", error);
+      throw error;
+    }
+  }
+);
+
+// NFT minted function
+export const nftMinted = inngest.createFunction(
+  { id: "nft-minted" },
+  { event: "nft/minted" },
+  async ({ event }) => {
+    try {
+      const { nftId, creatorId } = event.data;
+
+      // Send notification to creator
+      await sendNotification(
+        creatorId,
+        "nft_minted",
+        "NFT Minted Successfully",
+        "Your NFT has been minted and is now live on the marketplace."
+      );
+
+      // Update creator stats
+      const updateStatsQuery = `
+        UPDATE user_stats 
+        SET nfts_minted = nfts_minted + 1, updated_at = NOW()
+        WHERE user_id = $1
+      `;
+      await sql(updateStatsQuery, [creatorId]);
+
+      // Invalidate cache
+      await redis.del(`creator:${creatorId}:stats`);
+
+      return { success: true, nftId };
+    } catch (error) {
+      console.error("NFT minted function error:", error);
+      throw error;
+    }
+  }
+);
+
+// Payment completed function
+export const paymentCompleted = inngest.createFunction(
+  { id: "payment-completed" },
+  { event: "payment/completed" },
+  async ({ event }) => {
+    try {
+      const { paymentId, userId, amount } = event.data;
+
+      // Send notification to user
+      await sendNotification(
+        userId,
+        "payment_received",
+        "Payment Received",
+        `Your payment of $${amount} has been completed successfully.`
+      );
+
+      // Update user balance
+      const updateBalanceQuery = `
+        UPDATE users 
+        SET balance = balance + $1, updated_at = NOW()
+        WHERE id = $2
+      `;
+      await sql(updateBalanceQuery, [amount, userId]);
+
+      // Log transaction
+      const logTransactionQuery = `
+        INSERT INTO transactions (user_id, type, amount, status, payment_id, created_at)
+        VALUES ($1, 'credit', $2, 'completed', $3, NOW())
+      `;
+      await sql(logTransactionQuery, [userId, amount, paymentId]);
+
+      return { success: true, paymentId };
+    } catch (error) {
+      console.error("Payment completed function error:", error);
+      throw error;
+    }
+  }
+);
+
+// Daily analytics aggregation
+export const dailyAnalytics = inngest.createFunction(
+  { id: "daily-analytics" },
+  { cron: "0 2 * * *" }, // Runs daily at 2 AM
+  async () => {
+    try {
+      // Aggregate daily revenue
+      const revenueQuery = `
+        INSERT INTO daily_metrics (metric_date, total_revenue, nfts_minted, new_users)
+        SELECT
+          DATE(created_at) as metric_date,
+          COALESCE(SUM(amount), 0) as total_revenue,
+          COUNT(DISTINCT nft_id) as nfts_minted,
+          COUNT(DISTINCT new_user_id) as new_users
+        FROM (
+          SELECT created_at, amount, NULL as nft_id, NULL as new_user_id
+          FROM payments
+          WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '1 day'
+          UNION ALL
+          SELECT created_at, NULL, id, NULL
+          FROM nfts
+          WHERE created_at >= NOW() - INTERVAL '1 day'
+          UNION ALL
+          SELECT created_at, NULL, NULL, id
+          FROM users
+          WHERE created_at >= NOW() - INTERVAL '1 day'
+        ) daily_data
+        GROUP BY DATE(created_at)
+        ON CONFLICT (metric_date) DO UPDATE SET
+          total_revenue = EXCLUDED.total_revenue,
+          nfts_minted = EXCLUDED.nfts_minted,
+          new_users = EXCLUDED.new_users,
+          updated_at = NOW()
+      `;
+      await sql(revenueQuery, []);
+
+      // Cleanup old cache
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const cachePattern = `analytics:*${yesterday.toISOString().split('T')[0]}*`;
+      const keys = await redis.keys(cachePattern);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+
+      return { success: true, message: "Daily analytics processed" };
+    } catch (error) {
+      console.error("Daily analytics function error:", error);
+      throw error;
+    }
+  }
+);

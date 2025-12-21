@@ -1,17 +1,22 @@
 // lib/db.ts
 import { neon } from '@neondatabase/serverless';
 
-// Re-export the neon function for use elsewhere
-export { neon };
-
-// Helper to get a database connection INSIDE a function
+// Get database connection
 export function getDbConnection() {
   return neon(process.env.DATABASE_URL!);
 }
 
-// Example helper functions that are safe to use in routes
-export async function queryDb<T>(query: string, params: any[] = []): Promise<T[]> {
+// Execute a query
+export async function query<T = any>(sqlText: string, params: any[] = []): Promise<T[]> {
   const sql = neon(process.env.DATABASE_URL!);
-  // Use tagged template literal or parameterized query based on your needs
-  return sql`${query}` as T[];
+  return sql(sqlText, params) as Promise<T[]>;
+}
+
+// Alias for query (this is what inngest/functions.ts imports)
+export const sql = query;
+
+// Execute a query and return first row
+export async function queryOne<T = any>(sqlText: string, params: any[] = []): Promise<T | null> {
+  const rows = await query<T>(sqlText, params);
+  return rows[0] || null;
 }
