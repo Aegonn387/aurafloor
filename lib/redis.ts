@@ -1,5 +1,5 @@
-// lib/redis.ts - EDGE-COMPATIBLE VERSION
-import { Redis } from "@upstash/redis/edge"
+// lib/redis.ts - ORIGINAL VERSION (Node.js runtime)
+import { Redis } from "@upstash/redis"
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
