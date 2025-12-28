@@ -1,37 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { query } from "@/lib/db"
-import { getUserFromRequest } from "@/lib/auth"
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request)
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    const { searchParams } = new URL(request.url)
-    const limit = Number.parseInt(searchParams.get("limit") || "50")
-    const offset = Number.parseInt(searchParams.get("offset") || "0")
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    const transactions = await query(
-      `SELECT t.id, t.type, t.amount, t.status, t.created_at, t.completed_at,
-              u_from.display_name as from_name,
-              u_to.display_name as to_name,
-              n.title as nft_title
-       FROM transactions t
-       LEFT JOIN users u_from ON t.from_user_id = u_from.id
-       LEFT JOIN users u_to ON t.to_user_id = u_to.id
-       LEFT JOIN nfts n ON t.nft_id = n.id
-       WHERE t.from_user_id = $1 OR t.to_user_id = $1
-       ORDER BY t.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [user.id, limit, offset],
-    )
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    return NextResponse.json(transactions)
-  } catch (error) {
-    console.error("[v0] Failed to fetch transactions:", error)
-    return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

@@ -1,18 +1,21 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out" # Next.js static export outputs to /out
 
 [build.environment]
   NODE_VERSION = "22"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# No need for the nextjs plugin with static export
+# [[plugins]]
+#   package = "@netlify/plugin-nextjs"
 
+# If you need your validation key accessible
 [[redirects]]
   from = "/validation-key.txt"
-  to = "/.next/validation-key.txt"
+  to = "/validation-key.txt"
   status = 200
 
+# Catch-all for client-side routing (important for SPAs)
 [[redirects]]
   from = "/*"
   to = "/index.html"

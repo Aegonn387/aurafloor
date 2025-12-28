@@ -1,35 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { queryOne } from "@/lib/db"
-import { getUserFromRequest } from "@/lib/auth"
-import { getCached } from "@/lib/redis"
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request)
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    const wallet = await getCached(
-      `wallet:${user.id}`,
-      async () => {
-        return await queryOne(
-          `SELECT available_balance, pending_balance, lifetime_earnings, lifetime_spent
-           FROM user_wallets WHERE user_id = $1`,
-          [user.id],
-        )
-      },
-      60, // 1 minute cache
-    )
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    if (!wallet) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 })
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    return NextResponse.json(wallet)
-  } catch (error) {
-    console.error("[v0] Failed to fetch wallet balance:", error)
-    return NextResponse.json({ error: "Failed to fetch balance" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

@@ -1,45 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { nftId, sellerId, buyerId, price, creatorRoyaltyPercent } = await request.json()
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    // Validate royalty percentage (5-15%)
-    const royaltyPercent = Math.max(5, Math.min(15, creatorRoyaltyPercent || 10))
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    // Calculate fees for resale
-    const platformFee = price * 0.075 // 7.5% platform fee on resale
-    const creatorRoyalty = price * (royaltyPercent / 100) // 5-15% creator royalty
-    const sellerEarnings = price - platformFee - creatorRoyalty
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    const transaction = {
-      id: crypto.randomUUID(),
-      type: "resale",
-      nft_id: nftId,
-      seller_id: sellerId,
-      buyer_id: buyerId,
-      amount: price,
-      platform_fee: platformFee,
-      creator_royalty: creatorRoyalty,
-      seller_earnings: sellerEarnings,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    console.log("[v0] Resale transaction created:", transaction)
-
-    return NextResponse.json({
-      success: true,
-      transactionId: transaction.id,
-      breakdown: {
-        total: price,
-        platformFee,
-        creatorRoyalty,
-        sellerEarnings,
-      },
-    })
-  } catch (error) {
-    console.error("[v0] Resale failed:", error)
-    return NextResponse.json({ error: "Resale failed" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

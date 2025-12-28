@@ -1,3 +1,17 @@
+#!/bin/bash
+
+echo "Fixing all API routes for static export..."
+
+# Find all API route files
+ROUTE_FILES=$(find app -type f -path "*/api/*" -name "route.ts" -o -path "*/api/*" -name "route.js")
+
+for ROUTE_FILE in $ROUTE_FILES; do
+    echo "Processing: $ROUTE_FILE"
+    
+    # Check if the file already has dynamic export
+    if ! grep -q "export const dynamic" "$ROUTE_FILE"; then
+        # Create a temporary file with the fix
+        cat > "$ROUTE_FILE.tmp" << 'INNER_EOF'
 import { NextResponse } from 'next/server';
 
 // ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
@@ -36,3 +50,14 @@ export async function DELETE() {
     { status: 405 }
   );
 }
+INNER_EOF
+        
+        # Replace the original file
+        mv "$ROUTE_FILE.tmp" "$ROUTE_FILE"
+        echo "  → Fixed: Added static export configuration"
+    else
+        echo "  ✓ Already has dynamic export"
+    fi
+done
+
+echo "Done! All API routes are now compatible with static export."

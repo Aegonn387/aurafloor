@@ -1,39 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { userId, nftId, creatorId } = await request.json()
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    // Record ad impression
-    const adImpression = {
-      id: crypto.randomUUID(),
-      user_id: userId,
-      nft_id: nftId,
-      creator_id: creatorId,
-      ad_revenue: 0.01, // Example: 0.01π per ad view
-      creator_cut: 0.004, // 40% to creator
-      platform_cut: 0.006, // 60% to platform
-      timestamp: new Date().toISOString(),
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    console.log("[v0] Ad impression recorded:", adImpression)
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    // Grant temporary streaming access (30 minutes)
-    const streamAccess = {
-      userId,
-      nftId,
-      expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
-      quality: "128kbps", // Free tier gets preview quality
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    return NextResponse.json({
-      success: true,
-      message: "Ad watched! You can now stream for 30 minutes",
-      streamAccess,
-      adImpression,
-    })
-  } catch (error) {
-    console.error("[v0] Ad watch failed:", error)
-    return NextResponse.json({ error: "Failed to process ad" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

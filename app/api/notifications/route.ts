@@ -1,59 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { query } from "@/lib/db"
-import { getUserFromRequest } from "@/lib/auth"
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request)
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const unreadOnly = searchParams.get("unread") === "true"
-    const limit = Number.parseInt(searchParams.get("limit") || "50")
-
-    let whereClause = "WHERE user_id = $1"
-    if (unreadOnly) {
-      whereClause += " AND read = false"
-    }
-
-    const notifications = await query(
-      `SELECT id, type, title, message, read, metadata, created_at
-       FROM notifications
-       ${whereClause}
-       ORDER BY created_at DESC
-       LIMIT $2`,
-      [user.id, limit],
-    )
-
-    return NextResponse.json(notifications)
-  } catch (error) {
-    console.error("[v0] Failed to fetch notifications:", error)
-    return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 })
-  }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request)
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    const { notificationId, markAllRead } = await request.json()
-
-    if (markAllRead) {
-      await query(`UPDATE notifications SET read = true WHERE user_id = $1 AND read = false`, [user.id])
-    } else if (notificationId) {
-      await query(`UPDATE notifications SET read = true WHERE id = $1 AND user_id = $2`, [notificationId, user.id])
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("[v0] Failed to update notifications:", error)
-    return NextResponse.json({ error: "Failed to update notifications" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

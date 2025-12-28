@@ -1,70 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { query, queryOne } from "@/lib/db"
-import { getUserFromRequest } from "@/lib/auth"
-import { createPendingTransaction } from "@/lib/payments"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = await getUserFromRequest(request)
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    const { amount, toAddress } = await request.json()
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    if (!amount || !toAddress || amount <= 0) {
-      return NextResponse.json({ error: "Invalid withdrawal details" }, { status: 400 })
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    // Check balance
-    const wallet = await queryOne<{ available_balance: number }>(
-      `SELECT available_balance FROM user_wallets WHERE user_id = $1`,
-      [user.id],
-    )
-
-    if (!wallet || wallet.available_balance < amount) {
-      return NextResponse.json({ error: "Insufficient balance" }, { status: 400 })
-    }
-
-    // Create withdrawal transaction
-    const txId = await createPendingTransaction("withdrawal", user.id, user.id, null, amount, { toAddress })
-
-    // Update balance (move to pending)
-    await query(
-      `UPDATE user_wallets 
-       SET available_balance = available_balance - $1,
-           pending_balance = pending_balance + $1,
-           updated_at = NOW()
-       WHERE user_id = $2`,
-      [amount, user.id],
-    )
-
-    // In production: Process actual Pi Network withdrawal
-    // For now, we'll simulate immediate completion
-    setTimeout(async () => {
-      await query(
-        `UPDATE transactions SET status = 'completed', completed_at = NOW()
-         WHERE id = $1`,
-        [txId],
-      )
-
-      await query(
-        `UPDATE user_wallets 
-         SET pending_balance = pending_balance - $1,
-             updated_at = NOW()
-         WHERE user_id = $2`,
-        [amount, user.id],
-      )
-    }, 5000)
-
-    return NextResponse.json({
-      success: true,
-      transactionId: txId,
-      message: "Withdrawal initiated",
-    })
-  } catch (error) {
-    console.error("[v0] Withdrawal failed:", error)
-    return NextResponse.json({ error: "Withdrawal failed" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

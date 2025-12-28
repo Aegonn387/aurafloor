@@ -1,55 +1,38 @@
-import { NextResponse } from "next/server"
-import { uploadToR2, getAudioKey } from "@/lib/r2-storage"
-import { processAudioFile, extractAudioMetadata } from "@/lib/audio-processor"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  try {
-    const formData = await request.formData()
-    const audioFile = formData.get("audio") as File
-    const nftId = formData.get("nftId") as string
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!audioFile || !nftId) {
-      return NextResponse.json({ error: "Missing audio file or NFT ID" }, { status: 400 })
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    // Extract metadata
-    const metadata = await extractAudioMetadata(audioFile)
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    // Process audio into multiple qualities
-    const qualities = [
-      { bitrate: "128k" as const, suffix: "preview" as const },
-      { bitrate: "256k" as const, suffix: "standard" as const },
-      { bitrate: "320k" as const, suffix: "hq" as const },
-    ]
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    const uploadPromises = qualities.map(async ({ bitrate, suffix }) => {
-      const processed = await processAudioFile(audioFile, bitrate)
-      const key = getAudioKey(nftId, suffix)
-
-      const url = await uploadToR2(processed.buffer, key, "audio/mpeg", {
-        nftId,
-        quality: suffix,
-        bitrate,
-        duration: metadata.duration.toString(),
-      })
-
-      return { quality: suffix, url, bitrate, size: processed.size }
-    })
-
-    const results = await Promise.all(uploadPromises)
-
-    return NextResponse.json({
-      success: true,
-      metadata,
-      urls: {
-        preview: results[0].url,
-        standard: results[1].url,
-        hq: results[2].url,
-      },
-      sizes: results.map((r) => ({ quality: r.quality, size: r.size })),
-    })
-  } catch (error) {
-    console.error("[v0] Audio upload failed:", error)
-    return NextResponse.json({ error: "Failed to upload audio" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

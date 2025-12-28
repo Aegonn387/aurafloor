@@ -1,34 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { creatorId, userId, amount, message } = await request.json()
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    const tipTransaction = {
-      id: crypto.randomUUID(),
-      type: "tip",
-      from_user_id: userId,
-      to_user_id: creatorId,
-      amount, // 100% goes to creator
-      platform_fee: 0, // No platform fee on tips
-      message,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    console.log("[v0] Tip transaction created:", tipTransaction)
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    return NextResponse.json({
-      success: true,
-      transactionId: tipTransaction.id,
-      breakdown: {
-        total: amount,
-        creatorReceives: amount,
-        platformFee: 0,
-      },
-    })
-  } catch (error) {
-    console.error("[v0] Tip failed:", error)
-    return NextResponse.json({ error: "Tip failed" }, { status: 500 })
-  }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

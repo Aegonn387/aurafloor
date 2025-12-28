@@ -1,42 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { userId, title, price, editionType, totalEditions, royaltyPercent } = await request.json()
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    // Validate royalty percentage (5-15%)
-    const validatedRoyalty = Math.max(5, Math.min(15, royaltyPercent || 10))
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    const mintingFee = price * 0.05 // 5% minting fee
-    const creatorReceives = price - mintingFee
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    const mintTransaction = {
-      id: crypto.randomUUID(),
-      type: "mint",
-      creator_id: userId,
-      title,
-      price,
-      minting_fee: mintingFee,
-      creator_receives: creatorReceives,
-      edition_type: editionType,
-      total_editions: totalEditions,
-      royalty_percent: validatedRoyalty,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    console.log("[v0] Mint transaction created:", mintTransaction)
-
-    return NextResponse.json({
-      success: true,
-      transactionId: mintTransaction.id,
-      breakdown: {
-        mintingFee,
-        royaltyPercent: validatedRoyalty,
-      },
-    })
-  } catch (error) {
-    console.error("[v0] Minting failed:", error)
-    return NextResponse.json({ error: "Minting failed" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }

@@ -1,44 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { query, queryOne } from "@/lib/db"
-import { verifyPaymentWithPi, approvePaymentWithPi } from "@/lib/payments"
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
-  try {
-    const { paymentId, transactionId } = await request.json()
+// ⚠️ CRITICAL FOR STATIC EXPORT - DO NOT REMOVE
+export const dynamic = 'force-static';
+export const revalidate = 3600; // Revalidate cache every hour
 
-    if (!paymentId || !transactionId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
+// Static placeholder for all API endpoints
+// Note: In static export, API routes return pre-generated JSON
+export async function GET() {
+  return NextResponse.json({
+    message: "API endpoint is statically generated",
+    note: "Dynamic features require serverless functions",
+    endpoint: "REPLACE_WITH_ENDPOINT_NAME",
+    timestamp: new Date().toISOString()
+  });
+}
 
-    // Get transaction from database
-    const transaction = await queryOne(`SELECT * FROM transactions WHERE id = $1`, [transactionId])
+// Handle other methods with appropriate responses
+export async function POST() {
+  return NextResponse.json(
+    { error: "POST method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    if (!transaction) {
-      return NextResponse.json({ error: "Transaction not found" }, { status: 404 })
-    }
+export async function PUT() {
+  return NextResponse.json(
+    { error: "PUT method not available in static build" },
+    { status: 405 }
+  );
+}
 
-    // Verify payment with Pi Network
-    const paymentDTO = await verifyPaymentWithPi(paymentId)
-
-    // Validate amounts match
-    if (paymentDTO.amount !== transaction.amount) {
-      return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 })
-    }
-
-    // Approve with Pi Network
-    await approvePaymentWithPi(paymentId)
-
-    // Update transaction status
-    await query(
-      `UPDATE transactions 
-       SET status = 'approved', pi_payment_id = $1, updated_at = NOW()
-       WHERE id = $2`,
-      [paymentId, transactionId],
-    )
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("[v0] Payment approval failed:", error)
-    return NextResponse.json({ error: "Payment approval failed" }, { status: 500 })
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "DELETE method not available in static build" },
+    { status: 405 }
+  );
 }
