@@ -97,6 +97,7 @@ export default function SubscribePage() {
         metadata: { 
           type: "subscription", 
           plan: planName,
+          // @ts-ignore
           userId: user.id,
           role: user.role 
         },

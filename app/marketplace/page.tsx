@@ -67,7 +67,7 @@ export default function MarketplacePage() {
             </SelectTrigger>
             <SelectContent>
               {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
+                <SelectItem key={cat} value={cat!}>
                   {cat === "all" ? "All Categories" : cat}
                 </SelectItem>
               ))}

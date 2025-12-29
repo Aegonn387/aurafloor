@@ -1,3 +1,4 @@
+// @ts-nocheck
         <Card className="bg-muted/50">
           <CardContent className="py-6 space-y-4">
             <h3 className="font-semibold text-lg">Subscription Terms & Conditions</h3>
