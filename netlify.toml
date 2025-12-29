@@ -1,20 +1,7 @@
+
 [build]
   command = "npm run build"
-  publish = "out"
+  publish = ".next"
 
-[build.environment]
-  NODE_VERSION = "22"
-
-# PI NETWORK VERIFICATION - CRITICAL
-# This rule bypasses Next.js and serves the file directly from /out
-[[redirects]]
-  from = "/validation-key.txt"
-  to = "/validation-key.txt"
-  status = 200
-  force = true
-
-# Main app redirect - keep this last
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[functions]
+  node_bundler = "esbuild"
