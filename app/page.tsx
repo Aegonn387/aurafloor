@@ -169,7 +169,6 @@ export default function HomePage() {
         open={tipModalOpen} 
         onOpenChange={setTipModalOpen}
         // @ts-ignore
-        // @ts-ignore
         track={selectedTrack}
       />
       <AuthDialog 
