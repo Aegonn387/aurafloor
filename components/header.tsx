@@ -2,17 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Music2, Bell } from "lucide-react"
+import { Music2, Bell, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { AuthDialog } from "./auth-dialog"
 import { NotificationsPanel } from "./notifications-panel"
 import { useStore } from "@/lib/store"
+import { useTheme } from "next-themes"
 
 export function Header() {
   const [showAuth, setShowAuth] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const user = useStore((state) => state.user)
+  const { theme, setTheme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
 
   return (
     <>
@@ -26,6 +32,17 @@ export function Header() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="hidden sm:inline-flex"
+              aria-label="Toggle theme"
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </Button>
+
             {user ? (
               <>
                 <Button
@@ -37,7 +54,6 @@ export function Header() {
                   <Bell className="w-5 h-5" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
                 </Button>
-
                 <Link href="/profile">
                   <Button variant="ghost" size="icon">
                     <Avatar className="w-8 h-8">

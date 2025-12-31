@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, PlusCircle, Users, User } from "lucide-react"
+import { Home, Search, PlusCircle, Users, User, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/lib/store"
 
@@ -17,6 +17,7 @@ export function MobileNav() {
     ...(isCreator ? [{ href: "/mint", icon: PlusCircle, label: "Mint" }] : []),
     { href: "/community", icon: Users, label: "Community" },
     { href: "/profile", icon: User, label: "Profile" },
+    { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
   return (

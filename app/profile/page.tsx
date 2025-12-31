@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, LogOut, Music2, Heart, Wallet, Users, TrendingUp, Eye, ShoppingCart } from "lucide-react"
+import { Settings, LogOut, Music2, Heart, Wallet, Users, TrendingUp, Eye, ShoppingCart, Crown } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { mockTracks } from "@/lib/mock-data"
 import { NFTCard } from "@/components/nft-card"
@@ -42,6 +42,10 @@ export default function ProfilePage() {
                   <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
                     <h2 className="text-2xl font-bold">{user?.username || "Guest"}</h2>
                     <Badge variant="secondary">Collector</Badge>
+                    <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Premium
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
                   <p className="text-xs text-muted-foreground">Verified Pi Network User</p>
@@ -59,17 +63,11 @@ export default function ProfilePage() {
                   </div>
                   <div className="text-3xl font-bold mb-1">124.5π</div>
                   <p className="text-xs text-muted-foreground mb-3">Available Balance</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     <WalletModal currentBalance={124.5}>
                       <Button variant="outline" size="sm" className="w-full bg-transparent">
                         <Wallet className="w-4 h-4 mr-1" />
                         Manage Wallet
-                      </Button>
-                    </WalletModal>
-                    <WalletModal currentBalance={124.5}>
-                      <Button variant="outline" size="sm" className="w-full bg-transparent">
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                        History
                       </Button>
                     </WalletModal>
                   </div>
@@ -92,10 +90,12 @@ export default function ProfilePage() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-4 border-t">
-                <Button variant="outline" size="sm" className="w-full bg-transparent">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </Button>
+                <Link href="/settings">
+                  <Button variant="outline" size="sm" className="w-full bg-transparent">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Button>
+                </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="w-full bg-transparent">
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
@@ -172,18 +172,48 @@ export default function ProfilePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Subscription</CardTitle>
-              <CardDescription>Upgrade for ad-free experience</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-amber-500" />
+                    Subscription
+                  </CardTitle>
+                  <CardDescription>Manage your premium features</CardDescription>
+                </div>
+                <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-yellow-500">
+                  Active
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium">Free Plan</p>
-                  <p className="text-sm text-muted-foreground">Ads supported • Upgrade to remove ads</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Collector Elite</p>
+                    <p className="text-sm text-muted-foreground">10π/month • Next billing: Jan 15, 2024</p>
+                  </div>
+                  <Link href="/settings">
+                    <Button variant="outline" size="sm">Manage</Button>
+                  </Link>
                 </div>
-                <Link href="/subscribe">
-                  <Button className="w-full sm:w-auto">Upgrade to Premium</Button>
-                </Link>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Ad-free streaming</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Offline downloads</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>HD audio quality</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Early access</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -211,6 +241,10 @@ export default function ProfilePage() {
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
                   <h2 className="text-2xl font-bold">{user?.username || "Guest"}</h2>
                   <Badge>Creator</Badge>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Pro
+                  </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
                 <p className="text-xs text-muted-foreground">Verified Pi Network Creator</p>
@@ -218,10 +252,12 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="w-full bg-transparent">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
+              <Link href="/settings">
+                <Button variant="outline" size="sm" className="w-full bg-transparent">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Button>
+              </Link>
               <Button variant="outline" size="sm" onClick={handleLogout} className="w-full bg-transparent">
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -379,18 +415,48 @@ export default function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Creator Tools</CardTitle>
-            <CardDescription>Unlock advanced features and analytics</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-purple-500" />
+                  Creator Subscription
+                </CardTitle>
+                <CardDescription>Advanced tools and analytics</CardDescription>
+              </div>
+              <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500">
+                Creator Pro
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <p className="font-medium">Free Creator Account</p>
-                <p className="text-sm text-muted-foreground">Upgrade for AI tools and advanced analytics</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Creator Pro Plan</p>
+                  <p className="text-sm text-muted-foreground">20π/month • Next billing: Jan 15, 2024</p>
+                </div>
+                <Link href="/settings">
+                  <Button variant="outline" size="sm">Manage</Button>
+                </Link>
               </div>
-              <Link href="/subscribe">
-                <Button className="w-full sm:w-auto">View Creator Plans</Button>
-              </Link>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>AI-powered insights</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Advanced analytics</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Auto-promotion tools</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Premium verification</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -7,7 +6,7 @@ import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Sparkles, TrendingUp, Zap } from "lucide-react"
+import { CheckCircle2, Sparkles, TrendingUp, Zap, Shield, Clock, CreditCard, RefreshCw } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { PiAuth } from "@/lib/pi-auth"
@@ -94,22 +93,22 @@ export default function SubscribePage() {
       const paymentId = await PiAuth.createPayment({
         amount: price,
         memo: `Subscribe to ${planName} on Aurafloor`,
-        metadata: { 
-          type: "subscription", 
+        metadata: {
+          type: "subscription",
           plan: planName,
           // @ts-ignore
           userId: user.id,
-          role: user.role 
+          role: user.role
         },
       })
 
       console.log("[v1] Subscription payment initiated:", paymentId)
-      
+
       // Show success message before redirect
       setTimeout(() => {
         router.push("/profile?subscription=success")
       }, 1500)
-      
+
     } catch (error) {
       console.error("Subscription failed:", error)
       // You could add error state UI here
@@ -252,10 +251,6 @@ export default function SubscribePage() {
               </div>
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                <span>Full refund within 7 days if unsatisfied</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                 <span>Plan upgrades available anytime, prorated charges apply</span>
               </div>
               <div className="flex items-start gap-2">
@@ -268,10 +263,41 @@ export default function SubscribePage() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Shield className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="font-semibold mb-1">Secure Payments</h3>
+              <p className="text-sm text-muted-foreground">Pi Network blockchain security</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Clock className="w-6 h-6 text-accent" />
+              </div>
+              <h3 className="font-semibold mb-1">Flexible Plans</h3>
+              <p className="text-sm text-muted-foreground">Change or cancel anytime</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <RefreshCw className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="font-semibold mb-1">Easy Management</h3>
+              <p className="text-sm text-muted-foreground">Control everything in Settings</p>
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       <MobileNav />
     </div>
   )
 }
-
