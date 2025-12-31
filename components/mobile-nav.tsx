@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, PlusCircle, Users, User, Settings } from "lucide-react"
+import { Home, Search, PlusCircle, Users, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/lib/store"
 
@@ -17,7 +17,6 @@ export function MobileNav() {
     ...(isCreator ? [{ href: "/mint", icon: PlusCircle, label: "Mint" }] : []),
     { href: "/community", icon: Users, label: "Community" },
     { href: "/profile", icon: User, label: "Profile" },
-    { href: "/settings", icon: Settings, label: "Settings" },
   ]
 
   return (
@@ -31,7 +30,9 @@ export function MobileNav() {
               href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <item.icon className="w-5 h-5" />
