@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -12,12 +11,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
-import { Upload, Music2, CheckCircle2, Info } from "lucide-react"
+import { Upload, Music2, CheckCircle2, Info, Image as ImageIcon, Package, Brain, Radio, HelpCircle } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { PiAuth } from "@/lib/pi-auth"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export default function MintPage() {
   const router = useRouter()
@@ -38,6 +38,10 @@ export default function MintPage() {
   const [moderationStatus, setModerationStatus] = useState<"pending" | "approved" | "rejected" | null>(null)
   const [moderationFeedback, setModerationFeedback] = useState("")
 
+  // New state for NFT type and monetization
+  const [nftType, setNftType] = useState("audio")
+  const [monetization, setMonetization] = useState<string[]>([])
+
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       setAudioFile(e.target.files[0])
@@ -52,7 +56,6 @@ export default function MintPage() {
 
   const handleContentModeration = async () => {
     if (!audioFile) return
-
     setLoading(true)
     setModerationStatus("pending")
 
@@ -85,19 +88,20 @@ export default function MintPage() {
 
   const handleMint = async () => {
     if (!audioFile || !title || !price) return
-
     setLoading(true)
+
     try {
       const mintingFee = Number.parseFloat(price) * 0.05
-
       await PiAuth.createPayment({
         amount: mintingFee,
         memo: `Mint ${title} on Aurafloor (5% fee)`,
         metadata: {
           type: "mint",
+          nftType,
+          monetization,
           title,
           price: Number.parseFloat(price),
-          resaleFee: Number.parseInt(resaleFee),
+          resaleFee: monetization.includes("secondary") ? Number.parseInt(resaleFee) : 0,
           editionType,
           totalEditions: editionType === "limited" ? Number.parseInt(totalEditions) : 0,
         },
@@ -135,7 +139,6 @@ export default function MintPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <Header />
-
       <main className="container px-4 py-6 max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Mint Audio NFT</h1>
@@ -151,14 +154,74 @@ export default function MintPage() {
             <span className={step >= 4 ? "text-primary font-medium" : "text-muted-foreground"}>Complete</span>
           </div>
         </div>
-
         {step === 1 && (
           <Card>
             <CardHeader>
               <CardTitle>Upload Audio File</CardTitle>
               <CardDescription>Upload your music, podcast, or audio content</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* NFT Type Selection */}
+              <div className="space-y-3">
+                <Label>NFT Type</Label>
+                <div className="grid grid-cols-5 gap-2">
+                  {/* Audio - Enabled */}
+                  <button
+                    type="button"
+                    onClick={() => setNftType("audio")}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-4 border rounded-lg transition-colors",
+                      nftType === "audio" ? "border-primary bg-primary/10" : "border-muted bg-muted/50",
+                      "cursor-pointer hover:bg-muted"
+                    )}
+                  >
+                    <Music2 className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium">Audio</span>
+                  </button>
+
+                  {/* Digital Arts - Disabled */}
+                  <button
+                    type="button"
+                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <ImageIcon className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium">Digital Arts</span>
+                  </button>
+
+                  {/* Collectibles - Disabled */}
+                  <button
+                    type="button"
+                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <Package className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium">Collectibles</span>
+                  </button>
+
+                  {/* Intellectual Property - Disabled */}
+                  <button
+                    type="button"
+                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <Brain className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium">IP</span>
+                  </button>
+
+                  {/* Live Rooms - Disabled */}
+                  <button
+                    type="button"
+                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <Radio className="w-6 h-6 mb-2" />
+                    <span className="text-xs font-medium">Live Rooms</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Upload Section */}
               <label
                 htmlFor="audio-upload"
                 className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
@@ -166,14 +229,137 @@ export default function MintPage() {
                 <Upload className="w-12 h-12 text-muted-foreground mb-4" />
                 <p className="text-sm font-medium mb-1">Click to upload audio</p>
                 <p className="text-xs text-muted-foreground">MP3, WAV, or FLAC (max 100MB)</p>
-                <input id="audio-upload" type="file" accept="audio/*" className="hidden" onChange={handleAudioUpload} />
+                <input
+                  id="audio-upload"
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleAudioUpload}
+                />
               </label>
+
               {audioFile && (
                 <div className="mt-4 p-4 bg-muted rounded-lg">
                   <p className="text-sm font-medium">{audioFile.name}</p>
-                  <p className="text-xs text-muted-foreground">{(audioFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(audioFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                 </div>
               )}
+
+              {/* Monetization Options */}
+              <div className="space-y-3">
+                <Label>Monetization Options</Label>
+                <div className="space-y-2">
+                  {/* Free Content */}
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="free-content"
+                          checked={monetization.includes("free")}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMonetization([...monetization, "free"])
+                            } else {
+                              setMonetization(monetization.filter((item) => item !== "free"))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="free-content" className="ml-2 text-sm font-medium">
+                          Free Content
+                        </label>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <HelpCircle className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <p className="text-sm">
+                            Free content allows users to stream your audio for free. You earn 40% of ad revenue generated from user engagement with your content.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {/* Streaming */}
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="streaming"
+                          checked={monetization.includes("streaming")}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMonetization([...monetization, "streaming"])
+                            } else {
+                              setMonetization(monetization.filter((item) => item !== "streaming"))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="streaming" className="ml-2 text-sm font-medium">
+                          Streaming
+                        </label>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <HelpCircle className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <p className="text-sm">
+                            Streaming allows users to stream your audio. You earn 40% of ad revenue generated from user engagement with your content.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  {/* Secondary Market - Removed auctions from label */}
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="secondary"
+                          checked={monetization.includes("secondary")}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMonetization([...monetization, "secondary"])
+                            } else {
+                              setMonetization(monetization.filter((item) => item !== "secondary"))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="secondary" className="ml-2 text-sm font-medium">
+                          Secondary Market
+                        </label>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <HelpCircle className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                          <p className="text-sm">
+                            Enable secondary market sales. You can set a royalty fee (5-15%) on every resale.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+              </div>
               {moderationStatus && (
                 <div
                   className={cn(
@@ -184,8 +370,12 @@ export default function MintPage() {
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    {moderationStatus === "approved" && <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />}
-                    {moderationStatus === "rejected" && <Info className="w-5 h-5 text-red-500 mt-0.5" />}
+                    {moderationStatus === "approved" && (
+                      <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+                    )}
+                    {moderationStatus === "rejected" && (
+                      <Info className="w-5 h-5 text-red-500 mt-0.5" />
+                    )}
                     {moderationStatus === "pending" && (
                       <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mt-0.5" />
                     )}
@@ -200,18 +390,16 @@ export default function MintPage() {
                   </div>
                 </div>
               )}
+
               <Button
                 className="w-full"
                 onClick={handleContentModeration}
                 disabled={!audioFile || loading || moderationStatus === "approved"}
                 size="lg"
               >
-                {loading
-                  ? "Moderating Content..."
-                  : moderationStatus === "approved"
-                    ? "Proceeding..."
-                    : "Next: Moderate & Continue"}
+                {loading ? "Moderating Content..." : moderationStatus === "approved" ? "Proceeding..." : "Next: Moderate & Continue"}
               </Button>
+
               {moderationStatus === "rejected" && (
                 <Button
                   variant="outline"
@@ -308,14 +496,18 @@ export default function MintPage() {
                 <Button variant="outline" onClick={() => setStep(1)} size="lg">
                   Back
                 </Button>
-                <Button className="flex-1" onClick={() => setStep(3)} disabled={!title} size="lg">
+                <Button
+                  className="flex-1"
+                  onClick={() => setStep(3)}
+                  disabled={!title}
+                  size="lg"
+                >
                   Next: Set Pricing
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
-
         {step === 3 && (
           <Card>
             <CardHeader>
@@ -335,7 +527,9 @@ export default function MintPage() {
                     onChange={(e) => setPrice(e.target.value)}
                     className="pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">π</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    π
+                  </span>
                 </div>
               </div>
 
@@ -369,24 +563,27 @@ export default function MintPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="resale-fee">Secondary Sale Royalty (%)</Label>
-                <Select value={resaleFee} onValueChange={setResaleFee}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5%</SelectItem>
-                    <SelectItem value="7">7.5%</SelectItem>
-                    <SelectItem value="10">10%</SelectItem>
-                    <SelectItem value="12">12.5%</SelectItem>
-                    <SelectItem value="15">15%</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  You'll earn {resaleFee}% royalty on every secondary market sale (5-15% range)
-                </p>
-              </div>
+              {/* Secondary Market Royalty - Only show if selected in monetization */}
+              {monetization.includes("secondary") && (
+                <div className="space-y-2">
+                  <Label htmlFor="resale-fee">Secondary Sale Royalty (%)</Label>
+                  <Select value={resaleFee} onValueChange={setResaleFee}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5%</SelectItem>
+                      <SelectItem value="7">7.5%</SelectItem>
+                      <SelectItem value="10">10%</SelectItem>
+                      <SelectItem value="12">12.5%</SelectItem>
+                      <SelectItem value="15">15%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    You'll earn {resaleFee}% royalty on every secondary market sale (5-15% range)
+                  </p>
+                </div>
+              )}
 
               <Separator />
 
@@ -404,25 +601,39 @@ export default function MintPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Platform Fee (Primary)</span>
-                        <span className="font-medium">10% ({(Number.parseFloat(price || "0") * 0.1).toFixed(2)}π)</span>
+                        <span className="font-medium">
+                          10% ({(Number.parseFloat(price || "0") * 0.1).toFixed(2)}π)
+                        </span>
                       </div>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Resale Platform Fee</span>
-                        <span className="font-medium">7.5%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Your Resale Royalty</span>
-                        <span className="font-medium text-primary">{resaleFee}%</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Ad Revenue Share (free tier streams)</span>
-                        <span className="font-medium text-primary">40%</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pt-2">
-                        Ad revenue distributed twice monthly based on stream count
-                      </p>
+
+                      {monetization.includes("secondary") && (
+                        <>
+                          <Separator />
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Resale Platform Fee</span>
+                            <span className="font-medium">7.5%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Your Resale Royalty</span>
+                            <span className="font-medium text-primary">{resaleFee}%</span>
+                          </div>
+                        </>
+                      )}
+
+                      {(monetization.includes("free") || monetization.includes("streaming")) && (
+                        <>
+                          <Separator />
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Ad Revenue Share (free tier streams)
+                            </span>
+                            <span className="font-medium text-primary">40%</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground pt-2">
+                            Ad revenue distributed twice monthly based on stream count
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -432,7 +643,9 @@ export default function MintPage() {
                 <h3 className="font-semibold text-sm">Summary</h3>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Minting Fee (5%)</span>
-                  <span className="font-medium">{(Number.parseFloat(price || "0") * 0.05).toFixed(2)}π</span>
+                  <span className="font-medium">
+                    {(Number.parseFloat(price || "0") * 0.05).toFixed(2)}π
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">NFT Price</span>
@@ -441,20 +654,27 @@ export default function MintPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Edition Type</span>
                   <span className="font-medium capitalize">
-                    {editionType === "unique"
-                      ? "1 of 1"
-                      : editionType === "limited"
-                        ? `${totalEditions} copies`
-                        : "Unlimited"}
+                    {editionType === "unique" ? "1 of 1" : editionType === "limited" ? `${totalEditions} copies` : "Unlimited"}
                   </span>
                 </div>
+                {monetization.includes("secondary") && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Resale Royalty</span>
+                    <span className="font-medium">{resaleFee}%</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setStep(2)} size="lg">
                   Back
                 </Button>
-                <Button className="flex-1" onClick={handleMint} disabled={loading || !price} size="lg">
+                <Button
+                  className="flex-1"
+                  onClick={handleMint}
+                  disabled={loading || !price}
+                  size="lg"
+                >
                   {loading ? "Minting..." : `Mint NFT • ${(Number.parseFloat(price || "0") * 0.05).toFixed(2)}π`}
                 </Button>
               </div>
@@ -467,9 +687,13 @@ export default function MintPage() {
             <CardContent className="py-16 text-center">
               <CheckCircle2 className="w-20 h-20 text-primary mx-auto mb-6" />
               <h2 className="text-2xl font-bold mb-2">NFT Minted Successfully!</h2>
-              <p className="text-muted-foreground mb-2">Your audio NFT is now live on Aurafloor</p>
+              <p className="text-muted-foreground mb-2">
+                Your audio NFT is now live on Aurafloor
+              </p>
               <p className="text-sm text-muted-foreground mb-6">
-                You'll earn 90% on sales + {resaleFee}% on resales + 40% of ad revenue
+                You'll earn 90% on sales
+                {monetization.includes("secondary") && ` + ${resaleFee}% on resales`}
+                {(monetization.includes("free") || monetization.includes("streaming")) && " + 40% of ad revenue"}
               </p>
               <Button onClick={() => router.push("/marketplace")} size="lg">
                 View Marketplace
@@ -478,7 +702,6 @@ export default function MintPage() {
           </Card>
         )}
       </main>
-
       <MobileNav />
     </div>
   )
