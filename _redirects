@@ -1,0 +1,2 @@
+# Netlify redirect for .well-known folder
+/.well-known/* /well-known/:splat 200!
