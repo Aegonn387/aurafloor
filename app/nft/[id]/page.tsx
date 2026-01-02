@@ -8,10 +8,15 @@ export async function generateStaticParams() {
   return []
 }
 
-// NFT Detail Page
-export default async function NFTDetailPage({ params }: { params: { id: string } }) {
+// NFT Detail Page - CORRECTED FUNCTION SIGNATURE
+export default async function NFTDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  // Await the params promise (Required for Next.js 15+)
   const { id } = await params;
-  
+
   return (
     <div style={{ padding: '20px' }}>
       <h1>NFT Details</h1>
@@ -21,6 +26,3 @@ export default async function NFTDetailPage({ params }: { params: { id: string }
     </div>
   );
 }
-
-// Note: For static export, params is not a Promise
-// We're using a simpler approach that works with generateStaticParams
