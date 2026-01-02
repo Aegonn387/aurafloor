@@ -212,7 +212,7 @@ export function NotificationsPanel({ open, onOpenChange }: NotificationsPanelPro
                             </span>
                             {notif.unread && (
                               <Button 
-                                size="xs" 
+                                size="sm" 
                                 variant="ghost" 
                                 className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                               >
@@ -295,7 +295,7 @@ export function NotificationsPanel({ open, onOpenChange }: NotificationsPanelPro
                               </span>
                               <div className="flex items-center gap-1">
                                 <Button 
-                                  size="xs" 
+                                  size="sm" 
                                   variant="ghost" 
                                   className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
@@ -303,7 +303,7 @@ export function NotificationsPanel({ open, onOpenChange }: NotificationsPanelPro
                                 </Button>
                                 {msg.unread && (
                                   <Button 
-                                    size="xs" 
+                                    size="sm" 
                                     variant="ghost" 
                                     className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
@@ -361,7 +361,7 @@ export function NotificationsPanel({ open, onOpenChange }: NotificationsPanelPro
                               {activity.time}
                             </span>
                             <Button 
-                              size="xs" 
+                              size="sm" 
                               variant="ghost" 
                               className="h-6 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                             >
