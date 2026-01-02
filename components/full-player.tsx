@@ -66,6 +66,7 @@ export function FullPlayer() {
             <Button variant="ghost" size="icon" onClick={() => setIsMiniPlayer(true)}>
               <Minimize2 className="w-5 h-5" />
             </Button>
+// @ts-ignore
             <Button variant="ghost" size="icon" onClick={() => setCurrentTrack(null)}>
               <X className="w-5 h-5" />
             </Button>
