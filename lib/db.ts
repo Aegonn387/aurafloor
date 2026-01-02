@@ -1,41 +1,15 @@
-// lib/db.ts
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres'
 
-// Get database connection
-export function getDbConnection() {
-  return neon(process.env.DATABASE_URL!);
-}
+export const sql: any = postgres(process.env.DATABASE_URL || '')
 
-// Execute a query
-export async function query<T = any>(sqlText: string, params: any[] = []): Promise<T[]> {
-  const sql = getDbConnection();
+export async function query<T>(sqlText: string, params?: any[]): Promise<T[]> {
   try {
-    return (await sql(sqlText, params)) as T[];
+    if (params && params.length > 0) {
+      return (await sql(sqlText, ...params)) as T[]
+    }
+    return (await sql(sqlText)) as T[]
   } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
+    console.error('Database query error:', error)
+    throw error
   }
 }
-
-export const sql = query;
-
-export async function queryOne<T = any>(sqlText: string, params: any[] = []): Promise<T | null> {
-  const results = await query<T>(sqlText, params);
-  return results[0] || null;
-}
-
-/**
- * Execute database operations within a transaction.
- * Usage: await transaction(async () => { ... });
- */
-export async function transaction<T>(
-  callback: (sql: any) => Promise<T>
-): Promise<T> {
-  const sql = neon(process.env.DATABASE_URL!);
-  // Note: The Neon serverless driver might handle transactions differently.
-  // This is a basic example. You might need to use `sql.begin()` for proper transactions.
-  return callback(sql);
-}
-
-// Re-export neon for direct use if needed
-export { neon };

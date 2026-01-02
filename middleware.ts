@@ -2,12 +2,34 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { rateLimit } from "./lib/redis"
 
+// Helper to get IP from request headers
+function getIp(request: NextRequest) {
+  // Try common proxy headers for IP address
+  const xff = request.headers.get('x-forwarded-for')
+  if (xff) {
+    return xff.split(',')[0].trim()
+  }
+  
+  const realIp = request.headers.get('x-real-ip')
+  if (realIp) {
+    return realIp
+  }
+  
+  const cfConnectingIp = request.headers.get('cf-connecting-ip')
+  if (cfConnectingIp) {
+    return cfConnectingIp
+  }
+  
+  // Fallback to 'unknown' if no IP header found
+  return 'unknown'
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rate limiting for API routes
   if (pathname.startsWith("/api/")) {
-    const userId = request.headers.get("x-user-id") || request.ip || "anonymous"
+    const userId = request.headers.get("x-user-id") || getIp(request) || "anonymous"
 
     // Different limits for different endpoints
     let limit = 100 // requests per minute
@@ -21,16 +43,20 @@ export async function middleware(request: NextRequest) {
       window = 86400
     }
 
-    const allowed = await rateLimit(userId, pathname, limit, window)
+    const { success, remaining, reset } = await rateLimit(userId, limit, window)
 
-    if (!allowed) {
-      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+    if (!success) {
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+          "X-RateLimit-Reset": reset.toString(),
+        },
+      })
     }
+
+    // Continue with the request
+    return NextResponse.next()
   }
-
-  return NextResponse.next()
-}
-
-export const config = {
-  matcher: "/api/:path*",
 }

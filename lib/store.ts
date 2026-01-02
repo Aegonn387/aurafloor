@@ -21,7 +21,7 @@ export interface AudioTrack {
   owned: boolean
   description?: string
   category?: string
-  resaleFee?: number // 5-15% creator royalty on secondary sales
+  resaleFee?: number
   edition?: number
   totalEditions?: number
   streamCount?: number
@@ -64,19 +64,22 @@ interface AppStore {
   user: ExtendedPiUser | null
   setUser: (user: ExtendedPiUser | null) => void
 
-  // Audio player state
+  // Audio player state - FIXED: setCurrentTrack now accepts null
   currentTrack: AudioTrack | null
   isPlaying: boolean
   isMiniPlayer: boolean
   currentStreamUrl: string | null
   currentQuality: "128kbps" | "256kbps" | "320kbps" | null
-  setCurrentTrack: (track: AudioTrack) => void
+  setCurrentTrack: (track: AudioTrack | null) => void  // CHANGED HERE
   setIsPlaying: (playing: boolean) => void
   setIsMiniPlayer: (mini: boolean) => void
   setCurrentStreamUrl: (url: string | null, quality: "128kbps" | "256kbps" | "320kbps" | null) => void
 
-  // Community state
+  // Community state - ADDED missing properties from your app/community/page.tsx
   posts: Post[]
+  feedPosts: Post[]  // ADDED: Was missing
+  setPosts: (posts: Post[]) => void  // ADDED: Was missing
+  setFeedPosts: (posts: Post[]) => void  // ADDED: Was missing
   addPost: (post: Post) => void
   togglePostLike: (postId: string) => void
   addComment: (postId: string, comment: Comment) => void
@@ -93,26 +96,33 @@ export const useStore = create<AppStore>((set) => ({
   isMiniPlayer: true,
   currentStreamUrl: null,
   currentQuality: null,
-  setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
+  setCurrentTrack: (track) => set({ 
+    currentTrack: track, 
+    isPlaying: track !== null  // Only play if track is not null
+  }),
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setIsMiniPlayer: (mini) => set({ isMiniPlayer: mini }),
   setCurrentStreamUrl: (url, quality) => set({ currentStreamUrl: url, currentQuality: quality }),
 
+  // Community state with all required properties
   posts: [],
+  feedPosts: [],  // ADDED
+  setPosts: (posts) => set({ posts }),  // ADDED
+  setFeedPosts: (posts) => set({ feedPosts: posts }),  // ADDED
   addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
   togglePostLike: (postId) =>
     set((state) => ({
       posts: state.posts.map((post) =>
         post.id === postId
           ? { ...post, liked: !post.liked, likes: post.liked ? post.likes - 1 : post.likes + 1 }
-          : post,
-      ),
+          : post
+      )
     })),
   addComment: (postId, comment) =>
     set((state) => ({
       posts: state.posts.map((post) =>
-        post.id === postId ? { ...post, comments: [...post.comments, comment] } : post,
-      ),
+        post.id === postId ? { ...post, comments: [...post.comments, comment] } : post
+      )
     })),
   toggleCommentLike: (postId, commentId) =>
     set((state) => ({
@@ -123,21 +133,21 @@ export const useStore = create<AppStore>((set) => ({
               comments: post.comments.map((comment) =>
                 comment.id === commentId
                   ? { ...comment, liked: !comment.liked, likes: comment.liked ? comment.likes - 1 : comment.likes + 1 }
-                  : comment,
-              ),
+                  : comment
+              )
             }
-          : post,
-      ),
+          : post
+      )
     })),
   sharePost: (postId) => {
     // Implementation for sharing
     const post = useStore.getState().posts.find((p) => p.id === postId)
-    if (post && navigator.share) {
+    if (post && typeof window !== 'undefined' && navigator.share) {
       navigator.share({
         title: `Post by ${post.author}`,
         text: post.content,
-        url: `${window.location.origin}/community?post=${postId}`,
+        url: `${window.location.origin}/community?post=${postId}`
       })
     }
-  },
+  }
 }))

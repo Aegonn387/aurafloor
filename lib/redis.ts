@@ -1,113 +1,122 @@
-// lib/redis.ts - MOCK VERSION for static export builds
+import { Redis } from '@upstash/redis/cloudflare';
 
-// Mock Redis client for static builds
-class MockRedis {
-  private isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
-  
-  async get<T>(key: string): Promise<T | null> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: get(${key}) returning null`);
-    }
-    return null;
+// Development singleton pattern
+let redis: Redis;
+
+function createRedisClient(): Redis {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    console.warn('Upstash Redis environment variables are not set.');
+    return {
+      get: async () => null,
+      setex: async () => 'OK',
+      set: async () => 'OK',
+      zremrangebyscore: async () => 0,
+      zcard: async () => 0,
+      zadd: async () => 0,
+      zrange: async <T>() => [] as T[],
+      expire: async () => 0,
+    } as any;
   }
 
-  async setex(key: string, ttl: number, value: any): Promise<string> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: setex(${key}, ${ttl}) mocked`);
-    }
-    return 'OK';
-  }
-
-  async keys(pattern: string): Promise<string[]> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: keys(${pattern}) returning empty array`);
-    }
-    return [];
-  }
-
-  async del(...keys: string[]): Promise<number> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: del(${keys.join(', ')}) mocked`);
-    }
-    return keys.length;
-  }
-
-  async incr(key: string): Promise<number> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: incr(${key}) returning 1`);
-    }
-    return 1;
-  }
-
-  async expire(key: string, seconds: number): Promise<number> {
-    if (this.isBuildTime) {
-      console.warn(`[MockRedis] Static build: expire(${key}, ${seconds}) mocked`);
-    }
-    return 1;
-  }
+  return new Redis({
+    url,
+    token,
+  });
 }
 
-// Use mock client for static builds
-const redis = process.env.NEXT_PUBLIC_IS_STATIC_BUILD === 'true' 
-  ? new MockRedis() 
-  : new (require('@upstash/redis').Redis)({
-      url: process.env.UPSTASH_REDIS_REST_URL || '',
-      token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-    });
+if (process.env.NODE_ENV === 'production') {
+  redis = createRedisClient();
+} else {
+  const globalWithRedis = global as typeof globalThis & {
+    _upstashRedisClient?: Redis;
+  };
 
-// Cache helpers - updated for static builds
-export async function getCached<T>(
+  if (!globalWithRedis._upstashRedisClient) {
+    globalWithRedis._upstashRedisClient = createRedisClient();
+  }
+  redis = globalWithRedis._upstashRedisClient;
+}
+
+// Generic cache helper
+export async function getCachedOrFetch<T>(
   key: string,
   fallback: () => Promise<T>,
-  ttl = 300,
+  ttl: number = 3600
 ): Promise<T> {
-  // During static builds, always use fallback
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.warn(`[getCached] Static build: bypassing cache for ${key}`);
-    return fallback();
+    return await fallback();
   }
 
-  const cached = await redis.get<T>(key);
-  if (cached) return cached;
+  try {
+    const cached = await redis.get<T>(key);
+    if (cached !== null) return cached;
 
-  const fresh = await fallback();
-  await redis.setex(key, ttl, JSON.stringify(fresh));
-  return fresh;
-}
-
-export async function invalidateCache(pattern: string): Promise<void> {
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
-    console.warn(`[invalidateCache] Static build: skipping cache invalidation for ${pattern}`);
-    return;
-  }
-  
-  const keys = await redis.keys(pattern);
-  if (keys.length > 0) {
-    await redis.del(...keys);
+    const fresh = await fallback();
+    await redis.setex(key, ttl, fresh);
+    return fresh;
+  } catch (error) {
+    console.error(`[getCached] Error for key ${key}:`, error);
+    return await fallback();
   }
 }
 
-// Rate limiting helper
-export async function rateLimit(
-  userId: string,
-  action: string,
-  limit: number,
-  window: number,
-): Promise<boolean> {
-  // Always allow during static builds
-  if (process.env.NEXT_PHASE === 'phase-production-build') {
-    console.warn(`[rateLimit] Static build: allowing request for ${userId}:${action}`);
-    return true;
+// RATE LIMITER FUNCTION
+export async function rateLimit(identifier: string, limit: number = 10, windowInSeconds: number = 60): Promise<{
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+}> {
+  const key = `rate-limit:${identifier}`;
+  const now = Date.now();
+  const windowStart = now - (windowInSeconds * 1000);
+
+  try {
+    await redis.zremrangebyscore(key, 0, windowStart);
+    const requestCount = await redis.zcard(key);
+    
+    if (requestCount >= limit) {
+      const oldest = await redis.zrange<[string, number]>(key, 0, 0, { withScores: true });
+      let resetTime: number;
+      if (oldest.length > 0) {
+        const score = oldest[0][1];
+        resetTime = Math.ceil((Number(score) + (windowInSeconds * 1000)) / 1000);
+      } else {
+        resetTime = Math.ceil((now + (windowInSeconds * 1000)) / 1000);
+      }
+      
+      return {
+        success: false,
+        limit,
+        remaining: Math.max(0, limit - requestCount),
+        reset: resetTime,
+      };
+    }
+    
+    await redis.zadd(key, { score: now, member: `${now}-${Math.random()}` });
+    await redis.expire(key, windowInSeconds * 2);
+    
+    return {
+      success: true,
+      limit,
+      remaining: limit - (requestCount + 1),
+      reset: Math.ceil((now + (windowInSeconds * 1000)) / 1000),
+    };
+  } catch (error) {
+    console.error('[rateLimit] Error:', error);
+    return {
+      success: true,
+      limit,
+      remaining: limit - 1,
+      reset: Math.ceil((now + (windowInSeconds * 1000)) / 1000),
+    };
   }
-
-  const key = `ratelimit:${userId}:${action}`;
-  const current = await redis.incr(key);
-
-  if (current === 1) {
-    await redis.expire(key, window);
-  }
-
-  return current <= limit;
 }
 
+// Export the client
 export { redis };
+export default redis;

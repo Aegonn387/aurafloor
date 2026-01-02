@@ -1,25 +1,27 @@
-import { PinataSDK } from "pinata-web3"
+import { PinataSDK } from "pinata";
 
+// Initialize with JWT (NOT API key/secret anymore)
 const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT!,
-  pinataGateway: process.env.PINATA_GATEWAY || "gateway.pinata.cloud",
-})
+  pinataJwt: process.env.PINATA_JWT,
+  pinataGateway: process.env.NEXT_PUBLIC_GATEWAY_URL,
+});
 
-export async function pinToIPFS(file: File | Buffer): Promise<string> {
-  const upload = await pinata.upload.file(file)
-  return upload.IpfsHash
-}
+// Accept either Node Buffer or browser File
+export async function pinToIPFS(file: File | Buffer, filename?: string): Promise<string> {
+  let upload;
+  const options = filename ? { metadata: { name: filename } } : undefined;
 
-export async function pinJSONToIPFS(json: object): Promise<string> {
-  const upload = await pinata.upload.json(json)
-  return upload.IpfsHash
-}
+  // Handle File (Browser) or Buffer (Node) appropriately
+  if (file instanceof File) {
+    // Browser environment
+    upload = await pinata.upload.public.file(file, options);
+  } else {
+    // Node.js environment - convert Buffer to stream
+    const { Readable } = require('stream');
+    const stream = Readable.from(file);
+    upload = await pinata.upload.public.file(stream, options);
+  }
 
-export async function getFromIPFS(hash: string): Promise<any> {
-  const data = await pinata.gateways.get(hash)
-  return data.data
-}
-
-export function getIPFSUrl(hash: string): string {
-  return `https://${process.env.PINATA_GATEWAY || "gateway.pinata.cloud"}/ipfs/${hash}`
+  // Return the CID (not IpfsHash anymore)
+  return upload.cid;
 }

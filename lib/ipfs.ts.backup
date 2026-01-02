@@ -1,0 +1,18 @@
+import pinataSDK from '@pinata/sdk'
+import fs from 'fs'
+
+const pinata = new pinataSDK(
+  process.env.PINATA_API_KEY || '',
+  process.env.PINATA_API_SECRET || ''
+)
+
+// Accept either Node Buffer or browser File
+export async function pinToIPFS(file: File | Buffer, filename?: string): Promise<string> {
+  let fileToUpload: File | Buffer
+
+  // Just use the file as-is
+  fileToUpload = file
+
+  const upload = await pinata.upload.file(fileToUpload as any)
+  return upload.IpfsHash
+}
