@@ -4,12 +4,12 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/.well-known/:path*', // Matches /.well-known/pi.toml
-        destination: '/well-known/:path*', // Redirects to /well-known/pi.toml
-        permanent: true, // Uses a 308 permanent redirect
+        source: '/.well-known/:path*',
+        destination: '/well-known/:path*',
+        permanent: true,
       },
     ]
   },
 }
 
-module.exports = nextConfig
+export default nextConfig
