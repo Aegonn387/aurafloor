@@ -1,0 +1,10 @@
+# AURA Token Metadata for Pi Network Verification
+# Temporary placeholder icon - replace with final logo later
+# Official file: https://aurafloor.co.za/.well-known/pi.toml
+
+[[CURRENCIES]]
+code="AURA"
+issuer="GAVA6GTOZCCJ7XOLBZGYXV5HEWKYXMOTK5N6GQTJASPUEPY5TE7MXNAZ"
+name="AuraFloor"
+desc="The official utility token for the AuraFloor platform on Pi Network."
+image="https://aurafloor.co.za/aura-icon-temp.png"
