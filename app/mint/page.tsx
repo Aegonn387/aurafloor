@@ -119,16 +119,16 @@ export default function MintPage() {
 
   if (user?.role !== "creator") {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-20 sm:pb-24">
         <Header />
         <main className="container px-4 py-16 text-center">
           <div className="max-w-md mx-auto">
-            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Music2 className="w-10 h-10 text-muted-foreground" />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">Creator Access Required</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Creator Access Required</h1>
             <p className="text-muted-foreground mb-6">You need a creator account to mint NFTs</p>
-            <Button onClick={() => router.push("/")}>Go to Home</Button>
+            <Button onClick={() => router.push("/")} className="px-8">Go to Home</Button>
           </div>
         </main>
         <MobileNav />
@@ -137,17 +137,17 @@ export default function MintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 sm:pb-20">
       <Header />
-      <main className="container px-4 py-6 max-w-2xl mx-auto">
+      <main className="container px-4 py-6 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Mint Audio NFT</h1>
-          <p className="text-muted-foreground">Create your exclusive audio NFT in 3 simple steps</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Mint Audio NFT</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Create your exclusive audio NFT in 3 simple steps</p>
         </div>
 
         <div className="mb-8">
           <Progress value={(step / 4) * 100} className="h-2" />
-          <div className="flex justify-between mt-2 text-sm">
+          <div className="flex justify-between mt-2 text-sm sm:text-base">
             <span className={step >= 1 ? "text-primary font-medium" : "text-muted-foreground"}>Upload</span>
             <span className={step >= 2 ? "text-primary font-medium" : "text-muted-foreground"}>Details</span>
             <span className={step >= 3 ? "text-primary font-medium" : "text-muted-foreground"}>Pricing</span>
@@ -157,65 +157,65 @@ export default function MintPage() {
         {step === 1 && (
           <Card>
             <CardHeader>
-              <CardTitle>Upload Audio File</CardTitle>
-              <CardDescription>Upload your music, podcast, or audio content</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Upload Audio File</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Upload your music, podcast, or audio content</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* NFT Type Selection */}
               <div className="space-y-3">
-                <Label>NFT Type</Label>
-                <div className="grid grid-cols-5 gap-2">
+                <Label className="text-sm sm:text-base">NFT Type</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                   {/* Audio - Enabled */}
                   <button
                     type="button"
                     onClick={() => setNftType("audio")}
                     className={cn(
-                      "flex flex-col items-center justify-center p-4 border rounded-lg transition-colors",
+                      "flex flex-col items-center justify-center p-3 sm:p-4 border rounded-lg transition-colors",
                       nftType === "audio" ? "border-primary bg-primary/10" : "border-muted bg-muted/50",
                       "cursor-pointer hover:bg-muted"
                     )}
                   >
-                    <Music2 className="w-6 h-6 mb-2" />
+                    <Music2 className="w-5 h-5 sm:w-6 sm:h-6 mb-2" />
                     <span className="text-xs font-medium">Audio</span>
                   </button>
 
                   {/* Digital Arts - Disabled */}
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
                     disabled
                   >
-                    <ImageIcon className="w-6 h-6 mb-2" />
+                    <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 mb-2" />
                     <span className="text-xs font-medium">Digital Arts</span>
                   </button>
 
                   {/* Collectibles - Disabled */}
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
                     disabled
                   >
-                    <Package className="w-6 h-6 mb-2" />
+                    <Package className="w-5 h-5 sm:w-6 sm:h-6 mb-2" />
                     <span className="text-xs font-medium">Collectibles</span>
                   </button>
 
                   {/* Intellectual Property - Disabled */}
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
                     disabled
                   >
-                    <Brain className="w-6 h-6 mb-2" />
+                    <Brain className="w-5 h-5 sm:w-6 sm:h-6 mb-2" />
                     <span className="text-xs font-medium">IP</span>
                   </button>
 
                   {/* Live Rooms - Disabled */}
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
+                    className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed"
                     disabled
                   >
-                    <Radio className="w-6 h-6 mb-2" />
+                    <Radio className="w-5 h-5 sm:w-6 sm:h-6 mb-2" />
                     <span className="text-xs font-medium">Live Rooms</span>
                   </button>
                 </div>
@@ -224,9 +224,9 @@ export default function MintPage() {
               {/* Upload Section */}
               <label
                 htmlFor="audio-upload"
-                className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex flex-col items-center justify-center w-full h-48 sm:h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
               >
-                <Upload className="w-12 h-12 text-muted-foreground mb-4" />
+                <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mb-3 sm:mb-4" />
                 <p className="text-sm font-medium mb-1">Click to upload audio</p>
                 <p className="text-xs text-muted-foreground">MP3, WAV, or FLAC (max 100MB)</p>
                 <input
@@ -239,8 +239,8 @@ export default function MintPage() {
               </label>
 
               {audioFile && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">{audioFile.name}</p>
+                <div className="mt-4 p-3 sm:p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium truncate">{audioFile.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {(audioFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
@@ -249,7 +249,7 @@ export default function MintPage() {
 
               {/* Monetization Options */}
               <div className="space-y-3">
-                <Label>Monetization Options</Label>
+                <Label className="text-sm sm:text-base">Monetization Options</Label>
                 <div className="space-y-2">
                   {/* Free Content */}
                   <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -278,8 +278,8 @@ export default function MintPage() {
                             <HelpCircle className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80">
-                          <p className="text-sm">
+                        <PopoverContent className="w-80 text-sm">
+                          <p>
                             Free content allows users to stream your audio for free. You earn 40% of ad revenue generated from user engagement with your content.
                           </p>
                         </PopoverContent>
@@ -314,8 +314,8 @@ export default function MintPage() {
                             <HelpCircle className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80">
-                          <p className="text-sm">
+                        <PopoverContent className="w-80 text-sm">
+                          <p>
                             Streaming allows users to stream your audio. You earn 40% of ad revenue generated from user engagement with your content.
                           </p>
                         </PopoverContent>
@@ -350,8 +350,8 @@ export default function MintPage() {
                             <HelpCircle className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80">
-                          <p className="text-sm">
+                        <PopoverContent className="w-80 text-sm">
+                          <p>
                             Enable secondary market sales. You can set a royalty fee (5-15%) on every resale.
                           </p>
                         </PopoverContent>
@@ -360,10 +360,11 @@ export default function MintPage() {
                   </div>
                 </div>
               </div>
+
               {moderationStatus && (
                 <div
                   className={cn(
-                    "p-4 rounded-lg border",
+                    "p-3 sm:p-4 rounded-lg border",
                     moderationStatus === "approved" && "bg-green-500/10 border-green-500/20",
                     moderationStatus === "rejected" && "bg-red-500/10 border-red-500/20",
                     moderationStatus === "pending" && "bg-yellow-500/10 border-yellow-500/20",
@@ -371,13 +372,13 @@ export default function MintPage() {
                 >
                   <div className="flex items-start gap-3">
                     {moderationStatus === "approved" && (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mt-0.5" />
                     )}
                     {moderationStatus === "rejected" && (
-                      <Info className="w-5 h-5 text-red-500 mt-0.5" />
+                      <Info className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 mt-0.5" />
                     )}
                     {moderationStatus === "pending" && (
-                      <div className="w-5 h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mt-0.5" />
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mt-0.5" />
                     )}
                     <div className="flex-1">
                       <h4 className="font-semibold text-sm mb-1">
@@ -392,10 +393,9 @@ export default function MintPage() {
               )}
 
               <Button
-                className="w-full"
+                className="w-full h-11 sm:h-12 text-sm sm:text-base"
                 onClick={handleContentModeration}
                 disabled={!audioFile || loading || moderationStatus === "approved"}
-                size="lg"
               >
                 {loading ? "Moderating Content..." : moderationStatus === "approved" ? "Proceeding..." : "Next: Moderate & Continue"}
               </Button>
@@ -403,13 +403,12 @@ export default function MintPage() {
               {moderationStatus === "rejected" && (
                 <Button
                   variant="outline"
-                  className="w-full bg-transparent"
+                  className="w-full h-11 sm:h-12 bg-transparent text-sm sm:text-base"
                   onClick={() => {
                     setAudioFile(null)
                     setModerationStatus(null)
                     setModerationFeedback("")
                   }}
-                  size="lg"
                 >
                   Upload Different File
                 </Button>
@@ -421,15 +420,15 @@ export default function MintPage() {
         {step === 2 && (
           <Card>
             <CardHeader>
-              <CardTitle>NFT Details</CardTitle>
-              <CardDescription>Add information about your NFT</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">NFT Details</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Add information about your NFT</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="cover">Cover Art</Label>
+                <Label htmlFor="cover" className="text-sm sm:text-base">Cover Art</Label>
                 <label
                   htmlFor="cover-upload"
-                  className="flex items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-center w-full h-36 sm:h-40 md:h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
                 >
                   {coverFile ? (
                     <img
@@ -439,7 +438,7 @@ export default function MintPage() {
                     />
                   ) : (
                     <div className="text-center">
-                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <Upload className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">Upload cover art</p>
                     </div>
                   )}
@@ -454,30 +453,32 @@ export default function MintPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title" className="text-sm sm:text-base">Title *</Label>
                 <Input
                   id="title"
                   placeholder="Enter NFT title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  className="h-11 sm:h-12 text-sm sm:text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
                 <Textarea
                   id="description"
                   placeholder="Describe your audio NFT..."
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  className="text-sm sm:text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="text-sm sm:text-base">Category</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 sm:h-12 text-sm sm:text-base">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -493,14 +494,13 @@ export default function MintPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(1)} size="lg">
+                <Button variant="outline" onClick={() => setStep(1)} className="h-11 sm:h-12 flex-1">
                   Back
                 </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 h-11 sm:h-12 text-sm sm:text-base"
                   onClick={() => setStep(3)}
                   disabled={!title}
-                  size="lg"
                 >
                   Next: Set Pricing
                 </Button>
@@ -511,12 +511,12 @@ export default function MintPage() {
         {step === 3 && (
           <Card>
             <CardHeader>
-              <CardTitle>Pricing & Royalties</CardTitle>
-              <CardDescription>Set your NFT price, royalty terms, and edition details</CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Pricing & Royalties</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Set your NFT price, royalty terms, and edition details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="price">Price (π) *</Label>
+                <Label htmlFor="price" className="text-sm sm:text-base">Price (π) *</Label>
                 <div className="relative">
                   <Input
                     id="price"
@@ -525,7 +525,7 @@ export default function MintPage() {
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="pr-8"
+                    className="h-11 sm:h-12 pr-8 text-sm sm:text-base"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                     π
@@ -534,9 +534,9 @@ export default function MintPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Edition Type</Label>
+                <Label className="text-sm sm:text-base">Edition Type</Label>
                 <Select value={editionType} onValueChange={setEditionType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 sm:h-12 text-sm sm:text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -549,13 +549,14 @@ export default function MintPage() {
 
               {editionType === "limited" && (
                 <div className="space-y-2">
-                  <Label htmlFor="editions">Number of Copies</Label>
+                  <Label htmlFor="editions" className="text-sm sm:text-base">Number of Copies</Label>
                   <Input
                     id="editions"
                     type="number"
                     placeholder="100"
                     value={totalEditions}
                     onChange={(e) => setTotalEditions(e.target.value)}
+                    className="h-11 sm:h-12 text-sm sm:text-base"
                   />
                   <p className="text-xs text-muted-foreground">
                     Total number of NFT copies that will be available for sale
@@ -566,9 +567,9 @@ export default function MintPage() {
               {/* Secondary Market Royalty - Only show if selected in monetization */}
               {monetization.includes("secondary") && (
                 <div className="space-y-2">
-                  <Label htmlFor="resale-fee">Secondary Sale Royalty (%)</Label>
+                  <Label htmlFor="resale-fee" className="text-sm sm:text-base">Secondary Sale Royalty (%)</Label>
                   <Select value={resaleFee} onValueChange={setResaleFee}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 sm:h-12 text-sm sm:text-base">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -587,7 +588,7 @@ export default function MintPage() {
 
               <Separator />
 
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-3">
                 <div className="flex items-start gap-2">
                   <Info className="w-4 h-4 text-muted-foreground mt-0.5" />
                   <div className="flex-1">
@@ -639,7 +640,7 @@ export default function MintPage() {
                 </div>
               </div>
 
-              <div className="bg-muted rounded-lg p-4 space-y-2">
+              <div className="bg-muted rounded-lg p-3 sm:p-4 space-y-2">
                 <h3 className="font-semibold text-sm">Summary</h3>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Minting Fee (5%)</span>
@@ -666,14 +667,13 @@ export default function MintPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(2)} size="lg">
+                <Button variant="outline" onClick={() => setStep(2)} className="h-11 sm:h-12 flex-1">
                   Back
                 </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 h-11 sm:h-12 text-sm sm:text-base"
                   onClick={handleMint}
                   disabled={loading || !price}
-                  size="lg"
                 >
                   {loading ? "Minting..." : `Mint NFT • ${(Number.parseFloat(price || "0") * 0.05).toFixed(2)}π`}
                 </Button>
@@ -684,10 +684,10 @@ export default function MintPage() {
 
         {step === 4 && (
           <Card>
-            <CardContent className="py-16 text-center">
-              <CheckCircle2 className="w-20 h-20 text-primary mx-auto mb-6" />
-              <h2 className="text-2xl font-bold mb-2">NFT Minted Successfully!</h2>
-              <p className="text-muted-foreground mb-2">
+            <CardContent className="py-12 sm:py-16 text-center">
+              <CheckCircle2 className="w-16 h-16 sm:w-20 sm:h-20 text-primary mx-auto mb-4 sm:mb-6" />
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">NFT Minted Successfully!</h2>
+              <p className="text-muted-foreground mb-2 text-sm sm:text-base">
                 Your audio NFT is now live on Aurafloor
               </p>
               <p className="text-sm text-muted-foreground mb-6">
@@ -695,7 +695,10 @@ export default function MintPage() {
                 {monetization.includes("secondary") && ` + ${resaleFee}% on resales`}
                 {(monetization.includes("free") || monetization.includes("streaming")) && " + 40% of ad revenue"}
               </p>
-              <Button onClick={() => router.push("/marketplace")} size="lg">
+              <Button 
+                onClick={() => router.push("/marketplace")} 
+                className="h-11 sm:h-12 px-8 text-sm sm:text-base"
+              >
                 View Marketplace
               </Button>
             </CardContent>

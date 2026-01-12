@@ -63,25 +63,28 @@ export function PurchaseModal({ open, onOpenChange, track }: PurchaseModalProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md mx-auto max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
         {!success ? (
           <>
             <DialogHeader>
-              <DialogTitle>Purchase Audio NFT</DialogTitle>
-              <DialogDescription>Complete your purchase with Pi Network</DialogDescription>
+              <DialogTitle className="text-xl sm:text-2xl">Purchase Audio NFT</DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Complete your purchase with Pi Network
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="flex gap-4">
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+              {/* Track Info */}
+              <div className="flex gap-3 sm:gap-4">
                 <img
                   src={track.coverUrl || "/placeholder.svg"}
                   alt={track.title}
-                  className="w-20 h-20 rounded-lg object-cover shadow-md"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover shadow-md"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{track.title}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg truncate">{track.title}</h3>
                   <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
-                  <div className="flex gap-1 mt-1.5">
+                  <div className="flex flex-wrap gap-1 mt-1.5">
                     {track.category && (
                       <Badge variant="secondary" className="text-xs">
                         {track.category}
@@ -98,14 +101,16 @@ export function PurchaseModal({ open, onOpenChange, track }: PurchaseModalProps)
 
               <Separator />
 
-              <div className="space-y-2.5">
+              {/* Pricing Breakdown */}
+              <div className="space-y-2 sm:space-y-2.5">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">NFT Price</span>
                   <span className="font-medium">{track.price}π</span>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                
+                <div className="bg-muted/50 rounded-lg p-3 sm:p-3 space-y-2">
                   <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p>
                         • Creator receives <span className="font-medium text-foreground">90%</span> (
@@ -124,19 +129,22 @@ export function PurchaseModal({ open, onOpenChange, track }: PurchaseModalProps)
                     </div>
                   </div>
                 </div>
+
                 <Separator />
+
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total Amount</span>
-                  <span className="text-2xl font-bold text-primary">{total.toFixed(2)}π</span>
+                  <span className="font-semibold text-sm sm:text-base">Total Amount</span>
+                  <span className="text-xl sm:text-2xl font-bold text-primary">{total.toFixed(2)}π</span>
                 </div>
               </div>
 
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+              {/* Benefits */}
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 sm:p-4">
                 <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                   What you get:
                 </h4>
-                <ul className="text-sm text-muted-foreground space-y-1.5">
+                <ul className="text-xs sm:text-sm text-muted-foreground space-y-1.5">
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                     Unlimited HD streaming access
@@ -155,27 +163,33 @@ export function PurchaseModal({ open, onOpenChange, track }: PurchaseModalProps)
                   </li>
                 </ul>
               </div>
-
-              <Button onClick={handlePurchase} disabled={loading} className="w-full" size="lg">
-                {loading ? (
-                  "Processing Payment..."
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Confirm Purchase • {total.toFixed(2)}π
-                  </>
-                )}
-              </Button>
             </div>
+
+            {/* Purchase Button */}
+            <Button 
+              onClick={handlePurchase} 
+              disabled={loading} 
+              className="w-full text-sm sm:text-base min-h-[44px]"
+              size="lg"
+            >
+              {loading ? (
+                "Processing Payment..."
+              ) : (
+                <>
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Confirm Purchase • {total.toFixed(2)}π
+                </>
+              )}
+            </Button>
           </>
         ) : (
-          <div className="py-8 text-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-12 h-12 text-primary" />
+          <div className="py-6 sm:py-8 text-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <CheckCircle2 className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">Purchase Successful!</h3>
-            <p className="text-muted-foreground mb-1">You now own {track.title}</p>
-            <p className="text-sm text-muted-foreground">Start streaming in HD quality</p>
+            <h3 className="text-xl sm:text-2xl font-bold mb-2">Purchase Successful!</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-1">You now own {track.title}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Start streaming in HD quality</p>
           </div>
         )}
       </DialogContent>

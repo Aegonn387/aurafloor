@@ -4,19 +4,22 @@ import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, LogOut, Music2, Heart, Wallet, Users, TrendingUp, Eye, ShoppingCart, Crown } from "lucide-react"
+import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, Crown, Upload } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { mockTracks } from "@/lib/mock-data"
 import { NFTCard } from "@/components/nft-card"
-import { WalletModal } from "@/components/wallet-modal"
+import { InlineWallet } from "@/components/inline-wallet"
 import Link from "next/link"
+import { useState, useRef } from "react"
 
 export default function ProfilePage() {
   const user = useStore((state) => state.user)
   const setUser = useStore((state) => state.setUser)
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const ownedTracks = mockTracks.filter((t) => t.owned)
 
@@ -24,70 +27,67 @@ export default function ProfilePage() {
     setUser(null)
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setProfileImage(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
+
   if (user?.role === "collector") {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background pb-16 sm:pb-20">
         <Header />
+        
+        {/* Hidden file input for image upload */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+          accept="image/*"
+          className="hidden"
+        />
 
-        <main className="container px-4 py-6 space-y-6 max-w-3xl mx-auto">
+        <main className="container px-3 xs:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-3xl mx-auto">
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-6">
-                <Avatar className="w-20 h-20 shrink-0">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {user?.username?.[0] || "?"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 cursor-pointer" onClick={triggerFileInput}>
+                    {profileImage ? (
+                      <AvatarImage src={profileImage} alt={user?.username || "User"} />
+                    ) : null}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xl sm:text-2xl">
+                      {user?.username?.[0] || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                </div>
                 <div className="flex-1 text-center sm:text-left">
                   <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
-                    <h2 className="text-2xl font-bold">{user?.username || "Guest"}</h2>
-                    <Badge variant="secondary">Collector</Badge>
-                    <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500">
+                    <h2 className="text-xl sm:text-2xl font-bold">{user?.username || "Guest"}</h2>
+                    <Badge variant="secondary" className="text-xs">Collector</Badge>
+                    <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-xs">
                       <Crown className="w-3 h-3 mr-1" />
                       Premium
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
-                  <p className="text-xs text-muted-foreground">Verified Pi Network User</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
                 </div>
               </div>
 
-              <Card className="mb-4 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-5 h-5 text-primary" />
-                      <span className="font-semibold">Pi Wallet</span>
-                    </div>
-                    <Badge variant="outline">Connected</Badge>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">124.5π</div>
-                  <p className="text-xs text-muted-foreground mb-3">Available Balance</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    <WalletModal currentBalance={124.5}>
-                      <Button variant="outline" size="sm" className="w-full bg-transparent">
-                        <Wallet className="w-4 h-4 mr-1" />
-                        Manage Wallet
-                      </Button>
-                    </WalletModal>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xl font-bold">{ownedTracks.length}</div>
-                  <div className="text-xs text-muted-foreground">NFTs Owned</div>
-                </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xl font-bold">8</div>
-                  <div className="text-xs text-muted-foreground">Favorites</div>
-                </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xl font-bold">24</div>
-                  <div className="text-xs text-muted-foreground">Following</div>
-                </div>
-              </div>
+              {/* Wallet Section - EXACT InlineWallet component as provided */}
+              <InlineWallet mode="collector" connected={true} />
 
               <div className="grid grid-cols-2 gap-2 pt-4 border-t">
                 <Link href="/settings">
@@ -107,14 +107,14 @@ export default function ProfilePage() {
           {/* Tabs Section */}
           <Tabs defaultValue="collection" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="collection">Collection</TabsTrigger>
-              <TabsTrigger value="favorites">Favorites</TabsTrigger>
-              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="collection" className="text-xs sm:text-sm">Collection</TabsTrigger>
+              <TabsTrigger value="favorites" className="text-xs sm:text-sm">Favorites</TabsTrigger>
+              <TabsTrigger value="activity" className="text-xs sm:text-sm">Activity</TabsTrigger>
             </TabsList>
 
             <TabsContent value="collection" className="space-y-4 mt-6">
               {ownedTracks.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {ownedTracks.map((track) => (
                     <NFTCard key={track.id} track={track} onTip={() => {}} />
                   ))}
@@ -122,7 +122,7 @@ export default function ProfilePage() {
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <Music2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3" />
                     <h3 className="text-lg font-semibold mb-2">No NFTs Yet</h3>
                     <p className="text-sm text-muted-foreground mb-4">Start building your collection</p>
                     <Link href="/marketplace">
@@ -136,7 +136,7 @@ export default function ProfilePage() {
             <TabsContent value="favorites" className="space-y-4 mt-6">
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <Heart className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3" />
                   <h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3>
                   <p className="text-sm text-muted-foreground">Heart NFTs to save them here</p>
                 </CardContent>
@@ -146,8 +146,8 @@ export default function ProfilePage() {
             <TabsContent value="activity" className="space-y-4 mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your latest actions on Aurafloor</CardDescription>
+                  <CardTitle className="text-lg">Recent Activity</CardTitle>
+                  <CardDescription className="text-sm">Your latest actions on Aurafloor</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {[
@@ -156,8 +156,8 @@ export default function ProfilePage() {
                     { icon: Music2, label: "Streamed 'Neon Dreams'", time: "2 days ago" },
                   ].map((activity, index) => (
                     <div key={index} className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
-                        <activity.icon className="w-5 h-5 text-muted-foreground" />
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
+                        <activity.icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{activity.label}</p>
@@ -170,24 +170,23 @@ export default function ProfilePage() {
             </TabsContent>
           </Tabs>
 
+          {/* Premium Subscription Card */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Crown className="w-5 h-5 text-amber-500" />
-                    Subscription
-                  </CardTitle>
-                  <CardDescription>Manage your premium features</CardDescription>
-                </div>
-                <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-yellow-500">
-                  Active
-                </Badge>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Crown className="w-5 h-5 text-amber-500" />
+                  Premium Subscription
+                </CardTitle>
+                <CardDescription className="text-sm">Manage your premium features</CardDescription>
               </div>
+              <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-yellow-500 text-xs">
+                Active
+              </Badge>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">Collector Elite</p>
                     <p className="text-sm text-muted-foreground">10π/month • Next billing: Jan 15, 2024</p>
@@ -196,7 +195,7 @@ export default function ProfilePage() {
                     <Button variant="outline" size="sm">Manage</Button>
                   </Link>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <span>Ad-free streaming</span>
@@ -225,29 +224,45 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-16 sm:pb-20">
       <Header />
+      
+      {/* Hidden file input for image upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        className="hidden"
+      />
 
-      <main className="container px-4 py-6 space-y-6">
+      <main className="container px-3 xs:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-4">
-              <Avatar className="w-20 h-20 shrink-0">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                  {user?.username?.[0] || "?"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 cursor-pointer" onClick={triggerFileInput}>
+                  {profileImage ? (
+                    <AvatarImage src={profileImage} alt={user?.username || "User"} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xl sm:text-2xl">
+                    {user?.username?.[0] || "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </div>
+              </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold">{user?.username || "Guest"}</h2>
-                  <Badge>Creator</Badge>
-                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+                  <h2 className="text-xl sm:text-2xl font-bold">{user?.username || "Guest"}</h2>
+                  <Badge className="text-xs">Creator</Badge>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
                     <Crown className="w-3 h-3 mr-1" />
                     Pro
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
-                <p className="text-xs text-muted-foreground">Verified Pi Network Creator</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
               </div>
             </div>
 
@@ -266,72 +281,45 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1">
-                <Wallet className="w-4 h-4" />
-                Total Earnings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary mb-1">482.5π</div>
-              <p className="text-xs text-muted-foreground mb-3">+12.3π this week</p>
-              <WalletModal currentBalance={482.5}>
-                <Button variant="outline" size="sm" className="w-full bg-transparent">
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Manage Wallet
-                </Button>
-              </WalletModal>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Wallet Card for Creator - EXACT InlineWallet component as provided */}
+          <div className="sm:col-span-2 lg:col-span-2">
+            <InlineWallet mode="creator" connected={true} />
+          </div>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1">
+              <CardDescription className="flex items-center gap-1 text-sm">
                 <Eye className="w-4 h-4" />
                 Total Streams
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12.4K</div>
+              <div className="text-xl sm:text-2xl font-bold">12.4K</div>
               <p className="text-xs text-muted-foreground mt-1">+234 this week</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1">
+              <CardDescription className="flex items-center gap-1 text-sm">
                 <Users className="w-4 h-4" />
                 Followers
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,248</div>
+              <div className="text-xl sm:text-2xl font-bold">1,248</div>
               <p className="text-xs text-muted-foreground mt-1">+42 this week</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1">
-                <Music2 className="w-4 h-4" />
-                NFTs Minted
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">18</div>
-              <p className="text-xs text-muted-foreground mt-1">3 this month</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>Revenue Breakdown</CardTitle>
-                <CardDescription>Your earnings sources</CardDescription>
+                <CardTitle className="text-lg">Revenue Breakdown</CardTitle>
+                <CardDescription className="text-sm">Your earnings sources</CardDescription>
               </div>
               <Link href="/mint">
                 <Button size="sm">Mint New NFT</Button>
@@ -340,10 +328,10 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <ShoppingCart className="w-5 h-5 text-primary" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">NFT Sales (90%)</p>
@@ -351,15 +339,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-primary">324.8π</p>
+                  <p className="font-bold text-primary text-sm sm:text-base">324.8π</p>
                   <p className="text-xs text-muted-foreground">12 sales</p>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-accent" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">Ad Revenue (40%)</p>
@@ -367,15 +355,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-accent">89.2π</p>
+                  <p className="font-bold text-accent text-sm sm:text-base">89.2π</p>
                   <p className="text-xs text-muted-foreground">3.2K streams</p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-muted/50 rounded-lg gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-pink-500/10 rounded-lg flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-pink-500" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-500/10 rounded-lg flex items-center justify-center">
+                    <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">Tips</p>
@@ -383,7 +371,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-pink-500">68.5π</p>
+                  <p className="font-bold text-pink-500 text-sm sm:text-base">68.5π</p>
                   <p className="text-xs text-muted-foreground">24 tips</p>
                 </div>
               </div>
@@ -391,11 +379,11 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/mint">
             <Card className="hover:border-primary transition-colors cursor-pointer">
               <CardContent className="pt-6 text-center">
-                <Music2 className="w-12 h-12 text-primary mx-auto mb-3" />
+                <Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">Mint New NFT</h3>
                 <p className="text-sm text-muted-foreground">Upload and sell your audio</p>
               </CardContent>
@@ -405,7 +393,7 @@ export default function ProfilePage() {
           <Link href="/promote">
             <Card className="hover:border-accent transition-colors cursor-pointer">
               <CardContent className="pt-6 text-center">
-                <TrendingUp className="w-12 h-12 text-accent mx-auto mb-3" />
+                <TrendingUp className="w-10 h-10 sm:w-12 sm:h-12 text-accent mx-auto mb-3" />
                 <h3 className="font-semibold mb-1">Promote Content</h3>
                 <p className="text-sm text-muted-foreground">Boost your NFT visibility</p>
               </CardContent>
@@ -415,22 +403,22 @@ export default function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Crown className="w-5 h-5 text-purple-500" />
                   Creator Subscription
                 </CardTitle>
-                <CardDescription>Advanced tools and analytics</CardDescription>
+                <CardDescription className="text-sm">Advanced tools and analytics</CardDescription>
               </div>
-              <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500">
+              <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 text-xs">
                 Creator Pro
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">Creator Pro Plan</p>
                   <p className="text-sm text-muted-foreground">20π/month • Next billing: Jan 15, 2024</p>
@@ -439,7 +427,7 @@ export default function ProfilePage() {
                   <Button variant="outline" size="sm">Manage</Button>
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span>AI-powered insights</span>

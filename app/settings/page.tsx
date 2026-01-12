@@ -7,12 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { 
-  Mail, 
-  Bell, 
-  Shield, 
-  CreditCard, 
-  User, 
+import {
+  Mail,
+  Bell,
+  Shield,
+  CreditCard,
+  User,
   Palette,
   Moon,
   Sun,
@@ -75,24 +75,24 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
-
+      
       <main className="container px-4 py-6 space-y-6 max-w-4xl mx-auto">
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your account preferences and settings</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your account preferences and settings</p>
         </div>
 
         <Tabs defaultValue="subscription" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
-            <TabsTrigger value="support">Support</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-auto lg:inline-flex">
+            <TabsTrigger value="subscription" className="text-xs sm:text-sm">Subscription</TabsTrigger>
+            <TabsTrigger value="account" className="text-xs sm:text-sm">Account</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-xs sm:text-sm">Appearance</TabsTrigger>
+            <TabsTrigger value="support" className="text-xs sm:text-sm">Support</TabsTrigger>
           </TabsList>
 
-          {/* Subscription Management - Now First Tab */}
+          {/* Subscription Management */}
           <TabsContent value="subscription" className="space-y-4 mt-6">
             <Card>
               <CardHeader>
@@ -103,28 +103,28 @@ export default function SettingsPage() {
                 <div className="p-4 border rounded-lg bg-gradient-to-r from-primary/5 to-accent/5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-6 h-6 text-primary" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{subscriptionData.plan}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant={subscriptionData.status === "active" ? "default" : "secondary"}>
+                        <h3 className="font-semibold text-base sm:text-lg">{subscriptionData.plan}</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                          <Badge variant={subscriptionData.status === "active" ? "default" : "secondary"} className="w-fit">
                             {subscriptionData.status === "active" ? "Active" : "Inactive"}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs sm:text-sm text-muted-foreground">
                             {subscriptionData.price}π per {subscriptionData.period}
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Next billing</p>
-                      <p className="font-semibold">{subscriptionData.nextBilling}</p>
+                    <div className="text-left sm:text-right">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Next billing</p>
+                      <p className="font-semibold text-sm sm:text-base">{subscriptionData.nextBilling}</p>
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="space-y-2">
                       <h4 className="font-medium text-sm">Subscription Details</h4>
                       <div className="space-y-1 text-sm">
@@ -166,20 +166,20 @@ export default function SettingsPage() {
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Link href="/subscribe" className="flex-1">
-                      <Button className="w-full">Change Plan</Button>
+                      <Button className="w-full text-sm sm:text-base">Change Plan</Button>
                     </Link>
                     
                     <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" className="flex-1">
+                        <Button variant="outline" className="flex-1 text-sm sm:text-base">
                           Cancel Subscription
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Cancel Subscription</DialogTitle>
                           <DialogDescription>
-                            Are you sure you want to cancel your subscription? You'll lose access to premium features immediately.
+                            Are you sure you want to cancel your subscription? You&apos;ll lose access to premium features immediately.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
@@ -196,11 +196,11 @@ export default function SettingsPage() {
                             </div>
                           </div>
                         </div>
-                        <DialogFooter className="gap-2 sm:gap-0">
-                          <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                          <Button variant="outline" onClick={() => setCancelDialogOpen(false)} className="w-full sm:w-auto">
                             Keep Subscription
                           </Button>
-                          <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCancelling}>
+                          <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCancelling} className="w-full sm:w-auto">
                             {isCancelling ? "Cancelling..." : "Confirm Cancellation"}
                           </Button>
                         </DialogFooter>
@@ -211,16 +211,16 @@ export default function SettingsPage() {
 
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h4 className="font-medium">Billing History</h4>
+                    <h4 className="font-medium text-sm sm:text-base">Billing History</h4>
                     <div className="space-y-3">
                       {subscriptionData.history.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="space-y-1">
-                            <p className="font-medium text-sm">{item.plan}</p>
+                            <p className="font-medium text-xs sm:text-sm">{item.plan}</p>
                             <p className="text-xs text-muted-foreground">{item.date}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{item.amount > 0 ? `${item.amount}π` : "Free"}</p>
+                            <p className="font-semibold text-sm sm:text-base">{item.amount > 0 ? `${item.amount}π` : "Free"}</p>
                             <Badge variant="secondary" className="text-xs">
                               {item.status}
                             </Badge>
@@ -231,27 +231,27 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-medium">Payment Methods</h4>
+                    <h4 className="font-medium text-sm sm:text-base">Payment Methods</h4>
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <CreditCard className="w-5 h-5 text-primary" />
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                             </div>
                             <div>
-                              <p className="font-medium">Pi Wallet</p>
+                              <p className="font-medium text-sm sm:text-base">Pi Wallet</p>
                               <p className="text-xs text-muted-foreground">Primary payment method</p>
                             </div>
                           </div>
-                          <Badge variant="outline">Default</Badge>
+                          <Badge variant="outline" className="text-xs">Default</Badge>
                         </div>
                         <div className="space-y-2">
-                          <Button variant="outline" className="w-full justify-start">
+                          <Button variant="outline" className="w-full justify-start text-sm">
                             <CreditCard className="w-4 h-4 mr-2" />
                             Add Payment Method
                           </Button>
-                          <Button variant="outline" className="w-full justify-start">
+                          <Button variant="outline" className="w-full justify-start text-sm">
                             <Download className="w-4 h-4 mr-2" />
                             Download Invoices
                           </Button>
@@ -262,12 +262,12 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3">Need Help with Your Subscription?</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <h4 className="font-medium text-sm sm:text-base mb-3">Need Help with Your Subscription?</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                     Contact our support team for billing issues, plan changes, or any questions.
                   </p>
                   <a href="mailto:Aegon23@icloud.com">
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" className="w-full text-sm sm:text-base">
                       <Mail className="w-4 h-4 mr-2" />
                       Contact Billing Support
                     </Button>
@@ -286,23 +286,23 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username" className="text-sm sm:text-base">Username</Label>
                   <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{user?.username || "Guest"}</span>
+                    <span className="font-medium text-sm sm:text-base">{user?.username || "Guest"}</span>
                   </div>
                 </div>
-                
+
                 <div className="grid gap-2">
-                  <Label htmlFor="role">Account Type</Label>
+                  <Label htmlFor="role" className="text-sm sm:text-base">Account Type</Label>
                   <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
                     <Shield className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium capitalize">{user?.role || "Collector"}</span>
+                    <span className="font-medium text-sm sm:text-base capitalize">{user?.role || "Collector"}</span>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <Button variant="outline" className="w-full">Edit Profile</Button>
+                  <Button variant="outline" className="w-full text-sm sm:text-base">Edit Profile</Button>
                 </div>
               </CardContent>
             </Card>
@@ -315,11 +315,11 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="notifications" className="flex items-center gap-2">
+                    <Label htmlFor="notifications" className="flex items-center gap-2 text-sm sm:text-base">
                       <Bell className="w-4 h-4" />
                       Push Notifications
                     </Label>
-                    <p className="text-sm text-muted-foreground">Receive notifications about new content</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Receive notifications about new content</p>
                   </div>
                   <Switch
                     id="notifications"
@@ -330,11 +330,11 @@ export default function SettingsPage() {
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="email-updates" className="flex items-center gap-2">
+                    <Label htmlFor="email-updates" className="flex items-center gap-2 text-sm sm:text-base">
                       <Mail className="w-4 h-4" />
                       Email Updates
                     </Label>
-                    <p className="text-sm text-muted-foreground">Get updates about platform news</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Get updates about platform news</p>
                   </div>
                   <Switch
                     id="email-updates"
@@ -352,22 +352,22 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label>Data & Privacy</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm sm:text-base">Data & Privacy</Label>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Control how your data is used and stored
                   </p>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
                     <Lock className="w-4 h-4 mr-2" />
                     Privacy Settings
                   </Button>
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Download Your Data</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <Label className="text-sm sm:text-base">Download Your Data</Label>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Request a copy of your personal data
                   </p>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
                     <Download className="w-4 h-4 mr-2" />
                     Request Data Export
                   </Button>
@@ -384,13 +384,13 @@ export default function SettingsPage() {
                 <CardDescription>Customize how Aurafloor looks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-0.5">
-                    <Label htmlFor="dark-mode" className="flex items-center gap-2">
+                    <Label htmlFor="dark-mode" className="flex items-center gap-2 text-sm sm:text-base">
                       <Palette className="w-4 h-4" />
                       Theme Mode
                     </Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Switch between light and dark theme
                     </p>
                   </div>
@@ -405,13 +405,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4">
-                  <h4 className="font-medium">Theme Preview</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div 
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        theme === "light" ? "border-primary bg-primary/5" : "border-border"
-                      }`}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm sm:text-base">Theme Preview</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${theme === "light" ? "border-primary bg-primary/5" : "border-border"}`}
                       onClick={() => setTheme("light")}
                     >
                       <div className="flex items-center gap-2 mb-3">
@@ -429,10 +427,8 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <div 
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        theme === "dark" ? "border-primary bg-primary/5" : "border-border"
-                      }`}
+                    <div
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${theme === "dark" ? "border-primary bg-primary/5" : "border-border"}`}
                       onClick={() => setTheme("dark")}
                     >
                       <div className="flex items-center gap-2 mb-3">
@@ -453,14 +449,14 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3">Display Settings</h4>
+                  <h4 className="font-medium text-sm sm:text-base mb-3">Display Settings</h4>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <Label htmlFor="font-size">Font Size</Label>
-                        <p className="text-sm text-muted-foreground">Adjust text size</p>
+                        <Label htmlFor="font-size" className="text-sm sm:text-base">Font Size</Label>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Adjust text size</p>
                       </div>
-                      <select className="border rounded-lg px-3 py-1 text-sm">
+                      <select className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto">
                         <option>Default</option>
                         <option>Large</option>
                         <option>Larger</option>
@@ -469,8 +465,8 @@ export default function SettingsPage() {
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="animations">Animations</Label>
-                        <p className="text-sm text-muted-foreground">Enable interface animations</p>
+                        <Label htmlFor="animations" className="text-sm sm:text-base">Animations</Label>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Enable interface animations</p>
                       </div>
                       <Switch defaultChecked />
                     </div>
@@ -489,12 +485,12 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <h4 className="font-medium">Contact Us</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
+                  <h4 className="font-medium text-sm sm:text-base">Contact Us</h4>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3">
                     Have questions or need help? Reach out to our support team.
                   </p>
                   <a href="mailto:Aegon23@icloud.com">
-                    <Button className="w-full">
+                    <Button className="w-full text-sm sm:text-base">
                       <Mail className="w-4 h-4 mr-2" />
                       Email Support: Aegon23@icloud.com
                     </Button>
@@ -502,17 +498,17 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <h4 className="font-medium">Help Resources</h4>
-                  <div className="grid gap-2">
+                  <h4 className="font-medium text-sm sm:text-base">Help Resources</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
                       { title: "FAQs", description: "Frequently asked questions" },
                       { title: "User Guide", description: "How to use Aurafloor" },
                       { title: "Community", description: "Join our community forum" },
                       { title: "Terms of Service", description: "Platform rules and policies" },
                     ].map((resource, index) => (
-                      <Button key={index} variant="outline" className="justify-start h-auto py-3">
-                        <div className="text-left">
-                          <p className="font-medium">{resource.title}</p>
+                      <Button key={index} variant="outline" className="justify-start h-auto py-3 text-left">
+                        <div>
+                          <p className="font-medium text-sm">{resource.title}</p>
                           <p className="text-xs text-muted-foreground">{resource.description}</p>
                         </div>
                       </Button>
@@ -521,15 +517,15 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <h4 className="font-medium mb-3">About Aurafloor</h4>
+                  <h4 className="font-medium text-sm sm:text-base mb-3">About Aurafloor</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Version</span>
-                      <span className="text-sm font-medium">1.0.0</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">Version</span>
+                      <span className="text-xs sm:text-sm font-medium">1.0.0</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Last Updated</span>
-                      <span className="text-sm font-medium">Dec 2023</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">Last Updated</span>
+                      <span className="text-xs sm:text-sm font-medium">Dec 2023</span>
                     </div>
                   </div>
                 </div>

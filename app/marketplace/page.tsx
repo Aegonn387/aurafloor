@@ -45,7 +45,6 @@ export default function MarketplacePage() {
   return (
     <div className="min-h-screen bg-background pb-32">
       <Header />
-
       <main className="container px-4 py-6 space-y-6">
         {/* Search Bar */}
         <div className="relative">
@@ -93,7 +92,7 @@ export default function MarketplacePage() {
           <p className="text-sm text-muted-foreground mb-4">
             {filteredTracks.length} {filteredTracks.length === 1 ? "NFT" : "NFTs"} found
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTracks.map((track) => (
               <NFTCard key={track.id} track={track} onTip={() => handleTip(track)} />
             ))}

@@ -84,30 +84,37 @@ export function ReportModal({ open, onOpenChange, contentType, contentId, conten
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         {!submitted ? (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-destructive" />
+              <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                 Report {contentType === "nft" ? "NFT" : contentType === "post" ? "Post" : contentType}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {contentTitle && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">Reporting: {contentTitle}</p>
+                <div className="p-2.5 sm:p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium truncate">Reporting: {contentTitle}</p>
                 </div>
               )}
 
-              <div className="space-y-3">
-                <Label>Reason for report</Label>
-                <RadioGroup value={selectedReason} onValueChange={setSelectedReason}>
+              <div className="space-y-2 sm:space-y-3">
+                <Label className="text-sm sm:text-base">Reason for report</Label>
+                <RadioGroup value={selectedReason} onValueChange={setSelectedReason} className="space-y-2">
                   {reasons.map((reason) => (
-                    <div key={reason.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={reason.value} id={reason.value} />
-                      <Label htmlFor={reason.value} className="font-normal cursor-pointer">
+                    <div key={reason.value} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-lg">
+                      <RadioGroupItem 
+                        value={reason.value} 
+                        id={reason.value} 
+                        className="h-4 w-4 sm:h-4 sm:w-4"
+                      />
+                      <Label 
+                        htmlFor={reason.value} 
+                        className="font-normal cursor-pointer text-sm sm:text-base flex-1"
+                      >
                         {reason.label}
                       </Label>
                     </div>
@@ -116,38 +123,51 @@ export function ReportModal({ open, onOpenChange, contentType, contentId, conten
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="details">Additional details (optional)</Label>
+                <Label htmlFor="details" className="text-sm sm:text-base">
+                  Additional details (optional)
+                </Label>
                 <Textarea
                   id="details"
                   placeholder="Provide any additional context to help us review this report..."
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   rows={3}
+                  className="min-h-[100px] text-sm sm:text-base resize-none"
                 />
               </div>
 
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground">
+              <div className="bg-muted/50 p-2.5 sm:p-3 rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Your report will be reviewed by our moderation team. False reports may result in account restrictions.
                 </p>
               </div>
 
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => onOpenChange(false)} 
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto min-h-[44px] text-sm sm:text-base"
+                >
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={handleSubmit} disabled={!selectedReason || isSubmitting}>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleSubmit} 
+                  disabled={!selectedReason || isSubmitting}
+                  className="w-full sm:w-auto min-h-[44px] text-sm sm:text-base"
+                >
                   {isSubmitting ? "Submitting..." : "Submit Report"}
                 </Button>
               </div>
             </div>
           </>
         ) : (
-          <div className="py-8 text-center space-y-4">
-            <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
+          <div className="py-6 sm:py-8 text-center space-y-3 sm:space-y-4">
+            <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto" />
             <div>
-              <h3 className="text-lg font-semibold mb-2">Report Submitted</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">Report Submitted</h3>
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Thank you for helping keep Aurafloor safe. We'll review your report shortly.
               </p>
             </div>

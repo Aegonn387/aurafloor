@@ -1,4 +1,4 @@
-const collectorPlans = [
+export const collectorPlans = [
   {
     id: "premium",
     name: "Collector Premium",

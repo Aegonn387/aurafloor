@@ -24,6 +24,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
   const handleTip = async () => {
     const amount = selectedPreset || Number.parseFloat(customAmount)
+    
     if (!amount || amount <= 0) {
       toast({
         title: "Invalid amount",
@@ -40,10 +41,12 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
         memo: `Tip for ${trackTitle}`,
         metadata: { type: "tip", artist: artistName, track: trackTitle },
       })
+      
       toast({
         title: "Tip sent!",
         description: `You tipped ${amount}π to ${artistName}`,
       })
+      
       onOpenChange(false)
     } catch (error) {
       toast({
@@ -58,14 +61,17 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
         <DialogHeader>
-          <DialogTitle>Tip {artistName}</DialogTitle>
-          <DialogDescription>Support the artist for {trackTitle}</DialogDescription>
+          <DialogTitle className="text-xl sm:text-2xl">Tip {artistName}</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            Support the artist for {trackTitle}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          <div className="grid grid-cols-4 gap-2">
+        <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+          {/* Preset buttons */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {presets.map((amount) => (
               <Button
                 key={amount}
@@ -74,13 +80,14 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                   setSelectedPreset(amount)
                   setCustomAmount("")
                 }}
-                className="h-14 flex flex-col"
+                className="h-12 sm:h-14 flex flex-col min-h-[48px]"
               >
-                <span className="text-lg font-bold">{amount}π</span>
+                <span className="text-base sm:text-lg font-bold">{amount}π</span>
               </Button>
             ))}
           </div>
 
+          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -90,6 +97,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
             </div>
           </div>
 
+          {/* Custom amount input */}
           <div className="space-y-2">
             <Input
               type="number"
@@ -101,10 +109,17 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
               }}
               min="0.01"
               step="0.01"
+              className="text-base sm:text-sm h-11 sm:h-10"
             />
           </div>
 
-          <Button onClick={handleTip} disabled={loading} className="w-full" size="lg">
+          {/* Submit button */}
+          <Button 
+            onClick={handleTip} 
+            disabled={loading} 
+            className="w-full text-sm sm:text-base min-h-[44px]"
+            size="lg"
+          >
             {loading ? "Processing..." : `Send Tip`}
           </Button>
         </div>

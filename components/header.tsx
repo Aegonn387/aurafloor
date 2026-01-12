@@ -74,7 +74,6 @@ export function Header() {
       </header>
 
       <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
-
       {user && <NotificationsPanel open={showNotifications} onOpenChange={setShowNotifications} />}
     </>
   )

@@ -60,23 +60,39 @@ export function AdBanner({ placement, className = "" }: AdBannerProps) {
 
   return (
     <Card className={`border-muted ${bannerStyles[placement]} ${className}`}>
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">Sponsored</span>
+      <CardContent className="p-2 xs:p-3 sm:p-4">
+        <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 xs:gap-3">
+          <div className="flex-1 min-w-0 w-full xs:w-auto">
+            <div className="flex items-center gap-1 xs:gap-2 mb-0.5 xs:mb-1">
+              <span className="text-[10px] xs:text-xs font-medium text-muted-foreground bg-muted px-1.5 xs:px-2 py-0.5 rounded">
+                Sponsored
+              </span>
             </div>
-            <h4 className="font-semibold text-sm sm:text-base truncate">{adContent.title}</h4>
-            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">{adContent.description}</p>
+            <h4 className="font-semibold text-xs xs:text-sm sm:text-base truncate">
+              {adContent.title}
+            </h4>
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 xs:line-clamp-2">
+              {adContent.description}
+            </p>
           </div>
-          <Link href={adContent.url}>
-            <Button size="sm" className="shrink-0">
-              {adContent.cta}
+          <div className="flex items-center gap-1.5 xs:gap-2 self-stretch xs:self-auto">
+            <Link href={adContent.url}>
+              <Button 
+                size="sm" 
+                className="text-xs xs:text-sm whitespace-nowrap h-7 xs:h-9 px-2 xs:px-3"
+              >
+                {adContent.cta}
+              </Button>
+            </Link>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 xs:h-8 xs:w-8 shrink-0" 
+              onClick={() => setIsVisible(false)}
+            >
+              <X className="w-3 h-3 xs:w-4 xs:h-4" />
             </Button>
-          </Link>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setIsVisible(false)}>
-            <X className="w-4 h-4" />
-          </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
