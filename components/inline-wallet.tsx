@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+"use client"
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { PlayCircle, LogOut, HelpCircle, Copy, Check, Plus, Minus, Music, ShoppingBag, Send, History, Wallet, User, Shield, ExternalLink } from 'lucide-react';
+import { PlayCircle, LogOut, HelpCircle, Copy, Check, Plus, Minus, Music, ShoppingBag, Send, History, Wallet, User, Shield, ExternalLink, Loader2 } from 'lucide-react';
 
 interface InlineWalletProps {
   mode?: 'collector' | 'creator';
@@ -21,7 +23,9 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
   const [isConnected, setIsConnected] = useState<boolean>(connected);
   const [activeTab, setActiveTab] = useState<string>('balance');
   const [copied, setCopied] = useState<boolean>(false);
-  
+  const [piSDKReady, setPiSDKReady] = useState<boolean>(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
+
   const piAccount = {
     username: 'pi_music_lover',
     walletAddress: 'GD7FQKYT2VTHUCAFYF774KQ7O4Q7RGD5FP2RZ2SKO5E2NYKG3GEDGXYZ',
@@ -53,6 +57,24 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
     { id: 'TX009', type: 'NFT Purchase', amount: '-62.00 π', status: 'Completed', timestamp: 'Jan 1, 14:00', piTxId: 'PI_TX_Z6A7B8C9D0' }
   ];
 
+  // Check for Pi SDK on mount
+  useEffect(() => {
+    const checkPiSDK = () => {
+      if (window.Pi) {
+        setPiSDKReady(true);
+      }
+    };
+
+    checkPiSDK();
+
+    // Listen for Pi SDK ready event
+    window.addEventListener('pi-sdk-ready', checkPiSDK);
+    
+    return () => {
+      window.removeEventListener('pi-sdk-ready', checkPiSDK);
+    };
+  }, []);
+
   const copyAddress = () => {
     navigator.clipboard.writeText(piAccount.walletAddress);
     setCopied(true);
@@ -63,10 +85,94 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
     setIsConnected(!isConnected);
   };
 
-  const handleAddPi = () => {
+  const handleAddPi = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) return;
-    setPlatformBalance(prev => prev + parseFloat(depositAmount));
-    setDepositAmount('');
+    
+    if (!piSDKReady || !window.Pi) {
+      alert('Pi Network SDK is not available. Please ensure you are using the Pi Browser.');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      const amount = parseFloat(depositAmount);
+      
+      // Create payment using Pi Network SDK
+      const payment = await window.Pi.createPayment({
+        amount: amount,
+        memo: `Deposit ${amount} π to Aurafloor platform`,
+        metadata: { 
+          type: 'deposit',
+          amount: amount,
+          timestamp: new Date().toISOString()
+        }
+      }, {
+        onReadyForServerApproval: async (paymentId: string) => {
+          console.log('Payment ready for approval:', paymentId);
+          
+          // Call your backend to approve the payment
+          try {
+            const response = await fetch('/api/payments/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(data.error || 'Payment approval failed');
+            }
+          } catch (error) {
+            console.error('Server approval failed:', error);
+            throw error;
+          }
+        },
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          console.log('Payment ready for completion:', paymentId, txid);
+          
+          // Call your backend to complete the payment
+          try {
+            const response = await fetch('/api/payments/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId, txid })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(data.error || 'Payment completion failed');
+            }
+
+            // Update platform balance on successful completion
+            setPlatformBalance(prev => prev + amount);
+            setDepositAmount('');
+            alert(`Successfully deposited ${amount} π to your platform balance!`);
+          } catch (error) {
+            console.error('Server completion failed:', error);
+            throw error;
+          }
+        },
+        onCancel: (paymentId: string) => {
+          console.log('Payment cancelled:', paymentId);
+          setIsProcessingPayment(false);
+          alert('Payment was cancelled');
+        },
+        onError: (error: Error, payment?: any) => {
+          console.error('Payment error:', error, payment);
+          setIsProcessingPayment(false);
+          alert(`Payment failed: ${error.message}`);
+        }
+      });
+
+      console.log('Payment initiated:', payment);
+    } catch (error) {
+      console.error('Failed to create payment:', error);
+      alert('Failed to initiate payment. Please try again.');
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleWithdrawPi = () => {
@@ -117,9 +223,9 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                 </div>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="gap-2"
               onClick={handleConnectToggle}
             >
@@ -183,16 +289,31 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                       value={depositAmount}
                       onChange={(e) => setDepositAmount(e.target.value)}
                       className="flex-1"
+                      disabled={isProcessingPayment}
                     />
-                    <Button 
+                    <Button
                       onClick={handleAddPi}
-                      disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                      disabled={!depositAmount || parseFloat(depositAmount) <= 0 || isProcessingPayment || !piSDKReady}
                       className="gap-2"
                     >
-                      <Plus className="w-4 h-4" />
-                      Add π
+                      {isProcessingPayment ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          Add π
+                        </>
+                      )}
                     </Button>
                   </div>
+                  {!piSDKReady && (
+                    <p className="text-xs text-amber-600">
+                      Pi Network SDK not detected. Please use the Pi Browser to make payments.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -215,10 +336,10 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                         className="flex-1"
                       />
                     </div>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={handleWithdrawPi}
-                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || 
+                      disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 ||
                                parseFloat(withdrawAmount) > platformBalance || !withdrawAddress}
                       className="w-full gap-2"
                     >
@@ -246,9 +367,9 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                     {nfts.filter(n => n.owned).length} owned • {nfts.filter(n => n.favorite).length} favorites
                   </CardDescription>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="gap-2"
                   onClick={() => window.location.href = '/marketplace'}
                 >
@@ -261,7 +382,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
               <div className="space-y-3">
                 {nfts.map((nft) => (
                   <div key={nft.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/5 transition-colors">
-                    <div 
+                    <div
                       className="w-12 h-12 rounded-lg flex items-center justify-center cursor-pointer"
                       onClick={() => handlePlayAudio(nft.id)}
                     >
@@ -283,8 +404,8 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                       <p className="text-xs font-mono text-muted-foreground mt-1 truncate">{nft.tokenId}</p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="h-8 w-8 p-0"
                         onClick={() => handlePlayAudio(nft.id)}
                       >
@@ -292,18 +413,18 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                       </Button>
                       {nft.owned && (
                         <>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-8 w-8 p-0"
                             onClick={() => handleListForSale(nft.id)}
                             title="List on Marketplace"
                           >
                             <ShoppingBag className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-8 w-8 p-0"
                             onClick={() => handleTransferNFT(nft.id)}
                             title="Transfer NFT"
@@ -367,9 +488,9 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                 <p>• We don't hold private keys</p>
                 <p>• Withdrawals require verification</p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="w-full mt-3 gap-2"
                 onClick={() => window.location.href = '/help'}
               >
