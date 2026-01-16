@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { PiAuth } from "@/lib/pi-auth"
 import { useToast } from "@/hooks/use-toast"
 
 interface TipModalProps {
@@ -24,7 +23,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
   const handleTip = async () => {
     const amount = selectedPreset || Number.parseFloat(customAmount)
-    
+
     if (!amount || amount <= 0) {
       toast({
         title: "Invalid amount",
@@ -34,24 +33,101 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
       return
     }
 
-    setLoading(true)
-    try {
-      await PiAuth.createPayment({
-        amount,
-        memo: `Tip for ${trackTitle}`,
-        metadata: { type: "tip", artist: artistName, track: trackTitle },
+    // Check if Pi SDK is available
+    if (!window.Pi) {
+      toast({
+        title: "Pi SDK not loaded",
+        description: "Please refresh the page and try again",
+        variant: "destructive",
       })
+      return
+    }
+
+    setLoading(true)
+    
+    try {
+      // Note: User should already be authenticated via AuthDialog with 'payments' scope
+      // We'll proceed directly to createPayment
       
+      const paymentData = {
+        amount: amount,
+        memo: `Tip for ${trackTitle} by ${artistName}`,
+        metadata: { 
+          type: "tip", 
+          artist: artistName, 
+          track: trackTitle,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      const callbacks = {
+        onReadyForServerApproval: async (paymentId: string) => {
+          console.log("Payment ready for approval:", paymentId);
+          
+          // Call backend to approve the payment
+          const response = await fetch('/.netlify/functions/approve-payment.cjs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Payment approval failed');
+          }
+          
+          console.log("Payment approved on server");
+        },
+        
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          console.log("Payment ready for completion:", paymentId, txid);
+          
+          // Call backend to complete the payment
+          const response = await fetch('/.netlify/functions/complete-payment.cjs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Payment completion failed');
+          }
+          
+          console.log("Payment completed on server");
+        },
+        
+        onCancel: (paymentId: string) => {
+          console.log("Payment cancelled:", paymentId);
+          toast({
+            title: "Payment cancelled",
+            description: "The payment was cancelled",
+          });
+        },
+        
+        onError: (error: Error, paymentId: string) => {
+          console.error("Payment error:", error, paymentId);
+          toast({
+            title: "Payment failed",
+            description: error.message || "An error occurred during payment",
+            variant: "destructive",
+          });
+        }
+      };
+
+      // Create the payment using Pi SDK
+      const payment = await window.Pi.createPayment(paymentData, callbacks);
+      console.log("Payment created:", payment);
+
       toast({
         title: "Tip sent!",
         description: `You tipped ${amount}π to ${artistName}`,
       })
-      
+
       onOpenChange(false)
     } catch (error) {
+      console.error("Payment error:", error);
       toast({
         title: "Payment failed",
-        description: "Unable to process tip. Please try again.",
+        description: error instanceof Error ? error.message : "Unable to process tip. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -114,9 +190,9 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
           </div>
 
           {/* Submit button */}
-          <Button 
-            onClick={handleTip} 
-            disabled={loading} 
+          <Button
+            onClick={handleTip}
+            disabled={loading}
             className="w-full text-sm sm:text-base min-h-[44px]"
             size="lg"
           >

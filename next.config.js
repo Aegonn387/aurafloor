@@ -1,6 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Your other Next.js config options here (if any)
+  // Fix for Android/Termux permission errors
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules',
+          '**/.next',
+          '/data/**',
+          '/data/data/**',
+          '/**'
+        ].filter(Boolean)
+      };
+    }
+    return config;
+  },
+
   async redirects() {
     return [
       {
@@ -12,4 +28,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+module.exports = nextConfig;

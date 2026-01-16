@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { PiAuth } from "@/lib/pi-auth"
 import { useStore } from "@/lib/store"
 import { Music2, Disc3, CheckCircle2 } from "lucide-react"
 
@@ -11,14 +10,100 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<"connect" | "role">("connect")
   const setUser = useStore((state) => state.setUser)
+  const [piInitialized, setPiInitialized] = useState(false)
+
+  // Initialize Pi SDK
+  useEffect(() => {
+    const initializePi = () => {
+      if (typeof window !== 'undefined' && window.Pi) {
+        setPiInitialized(true)
+      } else {
+        // Load Pi SDK dynamically
+        const script = document.createElement('script')
+        script.src = 'https://sdk.minepi.com/pi-sdk.js'
+        script.async = true
+        script.onload = () => {
+          setPiInitialized(true)
+          console.log('Pi SDK loaded')
+        }
+        script.onerror = () => {
+          console.error('Failed to load Pi SDK')
+        }
+        document.head.appendChild(script)
+      }
+    }
+
+    if (open) {
+      initializePi()
+    }
+  }, [open])
+
+  const verifyPiUser = async (accessToken: string) => {
+    // For development: Check if we're in localhost
+    const isLocalhost = window.location.hostname === 'localhost'
+    const baseUrl = isLocalhost ? 'http://localhost:8888' : ''
+    // REMOVED .cjs EXTENSION - Netlify functions don't use file extensions in routes
+    const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`
+
+    console.log('[DEBUG] Calling Netlify function:', functionUrl)
+
+    try {
+      const verificationResponse = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ accessToken })
+      })
+
+      console.log('[DEBUG] Response status:', verificationResponse.status)
+
+      // Get response as text first
+      const responseText = await verificationResponse.text()
+      console.log('[DEBUG] Raw response:', responseText.substring(0, 200))
+
+      if (!verificationResponse.ok) {
+        console.error('[DEBUG] Response not OK:', responseText)
+        throw new Error(`Server error: ${verificationResponse.status}`)
+      }
+
+      // Try to parse as JSON
+      try {
+        return JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('[DEBUG] JSON parse failed:', parseError, 'Text was:', responseText)
+        throw new Error('Invalid JSON response from server')
+      }
+    } catch (error) {
+      console.error('[DEBUG] Fetch error:', error)
+      throw error
+    }
+  }
 
   const handleConnect = async () => {
     setLoading(true)
     try {
-      const user = await PiAuth.authenticate()
+      if (!window.Pi || !piInitialized) {
+        throw new Error("Pi SDK not loaded")
+      }
+
+      const scopes = ['username', 'payments']
+      const onIncompletePaymentFound = (payment: any) => {
+        console.log("Incomplete payment found during auth:", payment)
+      }
+
+      const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
+      console.log("Pi authentication successful:", authResult.user)
+
+      // Send the accessToken to your backend for verification
+      const verifiedData = await verifyPiUser(authResult.accessToken)
+      console.log("Pi user verified:", verifiedData.user)
+
       setStep("role")
-    } catch (error) {
-      console.error("Authentication failed:", error)
+    } catch (error: any) {
+      console.error("Authentication failed:", error.message || error)
+      alert(`Authentication failed: ${error.message || 'Please try again'}`)
     } finally {
       setLoading(false)
     }
@@ -27,13 +112,33 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const handleRoleSelect = async (role: "creator" | "collector") => {
     setLoading(true)
     try {
-      const user = await PiAuth.authenticate()
-      setUser({ ...user, role })
+      if (!window.Pi || !piInitialized) {
+        throw new Error("Pi SDK not loaded")
+      }
+
+      const scopes = ['username', 'payments']
+      const onIncompletePaymentFound = (payment: any) => {
+        console.log("Incomplete payment found during auth:", payment)
+      }
+
+      const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
+      console.log("Pi authentication successful:", authResult.user)
+
+      // Send the accessToken to your backend for verification
+      const verifiedData = await verifyPiUser(authResult.accessToken)
+      console.log("Pi user verified:", verifiedData.user)
+
+      setUser({
+        uid: verifiedData.user.uid,
+        username: verifiedData.user.username,
+        accessToken: authResult.accessToken,
+        role: role
+      })
       onOpenChange(false)
-      // Reset step for next time
       setTimeout(() => setStep("connect"), 300)
-    } catch (error) {
-      console.error("Role selection failed:", error)
+    } catch (error: any) {
+      console.error("Role selection failed:", error.message || error)
+      alert(`Role selection failed: ${error.message || 'Please try again'}`)
     } finally {
       setLoading(false)
     }
@@ -65,24 +170,26 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               {/* Browser detection info */}
               <div className="bg-muted rounded-lg p-2.5 sm:p-3 text-xs">
                 <p className="text-muted-foreground text-center">
-                  {PiAuth.isAvailable() ? (
+                  {piInitialized ? (
                     <span className="flex items-center justify-center gap-1.5 sm:gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                       Pi Browser Detected
                     </span>
                   ) : (
-                    "Demo mode - Production requires Pi Browser"
+                    <span>
+                      Loading Pi SDK... {typeof window !== 'undefined' && window.Pi ? "Ready" : "Please use Pi Browser"}
+                    </span>
                   )}
                 </p>
               </div>
 
-              <Button 
-                onClick={handleConnect} 
-                disabled={loading} 
-                size="lg" 
+              <Button
+                onClick={handleConnect}
+                disabled={loading || !piInitialized}
+                size="lg"
                 className="w-full text-sm sm:text-base min-h-[44px]"
               >
-                {loading ? "Connecting..." : "Connect Pi Wallet"}
+                {loading ? "Connecting..." : piInitialized ? "Connect Pi Wallet" : "Initializing..."}
               </Button>
             </div>
           </>
@@ -99,7 +206,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             <div className="grid grid-cols-1 gap-3 sm:gap-4 py-4 sm:py-6">
               <button
                 onClick={() => handleRoleSelect("creator")}
-                disabled={loading}
+                disabled={loading || !piInitialized}
                 className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all p-4 sm:p-6 text-left hover:bg-primary/5 min-h-[100px] sm:min-h-0"
               >
                 <div className="flex items-start gap-3 sm:gap-4">
@@ -114,10 +221,10 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   </div>
                 </div>
               </button>
-              
+
               <button
                 onClick={() => handleRoleSelect("collector")}
-                disabled={loading}
+                disabled={loading || !piInitialized}
                 className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-accent transition-all p-4 sm:p-6 text-left hover:bg-accent/5 min-h-[100px] sm:min-h-0"
               >
                 <div className="flex items-start gap-3 sm:gap-4">
