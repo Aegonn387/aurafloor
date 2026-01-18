@@ -6,21 +6,6 @@ import { Button } from "@/components/ui/button"
 import { useStore } from "@/lib/store"
 import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react"
 
-declare global {
-  interface Window {
-    Pi?: {
-      authenticate: (scopes: string[], onIncompletePaymentFound: (payment: any) => void) => Promise<{
-        accessToken: string
-        user: {
-          uid: string
-          username: string
-        }
-      }>
-      init: (config: { version: string; sandbox?: boolean }) => void
-    }
-  }
-}
-
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<"connect" | "role">("connect")
