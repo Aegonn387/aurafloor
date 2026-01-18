@@ -1,35 +1,86 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/lib/store"
-import { Music2, Disc3, CheckCircle2 } from "lucide-react"
+import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react"
+
+declare global {
+  interface Window {
+    Pi?: {
+      authenticate: (scopes: string[], onIncompletePaymentFound: (payment: any) => void) => Promise<{
+        accessToken: string
+        user: {
+          uid: string
+          username: string
+        }
+      }>
+      init: (config: { version: string; sandbox?: boolean }) => void
+    }
+  }
+}
 
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<"connect" | "role">("connect")
   const setUser = useStore((state) => state.setUser)
   const [piInitialized, setPiInitialized] = useState(false)
+  const [sdkError, setSdkError] = useState<string | null>(null)
 
-  // Initialize Pi SDK
   useEffect(() => {
-    const initializePi = () => {
-      if (typeof window !== 'undefined' && window.Pi) {
-        setPiInitialized(true)
-      } else {
-        // Load Pi SDK dynamically
-        const script = document.createElement('script')
-        script.src = 'https://sdk.minepi.com/pi-sdk.js'
+    const initializePi = async () => {
+      try {
+        setSdkError(null)
+
+        if (typeof window !== "undefined" && window.Pi) {
+          console.log("[Pi SDK] Already loaded, initializing...")
+
+          try {
+            window.Pi.init({ version: "2.0", sandbox: process.env.NODE_ENV === "development" })
+            setPiInitialized(true)
+            console.log("[Pi SDK] Initialized successfully")
+          } catch (initError) {
+            console.error("[Pi SDK] Init error:", initError)
+            setPiInitialized(true)
+          }
+          return
+        }
+
+        console.log("[Pi SDK] Loading script...")
+        const script = document.createElement("script")
+        script.src = "https://sdk.minepi.com/pi-sdk.js"
         script.async = true
+
         script.onload = () => {
-          setPiInitialized(true)
-          console.log('Pi SDK loaded')
+          console.log("[Pi SDK] Script loaded, initializing...")
+
+          setTimeout(() => {
+            if (window.Pi) {
+              try {
+                window.Pi.init({ version: "2.0", sandbox: process.env.NODE_ENV === "development" })
+                setPiInitialized(true)
+                console.log("[Pi SDK] Initialized successfully")
+              } catch (initError) {
+                console.error("[Pi SDK] Init error:", initError)
+                setPiInitialized(true)
+              }
+            } else {
+              console.error("[Pi SDK] Pi object not available after script load")
+              setSdkError("Pi SDK loaded but not available. Please use Pi Browser.")
+            }
+          }, 100)
         }
-        script.onerror = () => {
-          console.error('Failed to load Pi SDK')
+
+        script.onerror = (error) => {
+          console.error("[Pi SDK] Failed to load script:", error)
+          setSdkError("Failed to load Pi SDK. Please check your connection.")
         }
+
         document.head.appendChild(script)
+      } catch (error) {
+        console.error("[Pi SDK] Initialization error:", error)
+        setSdkError("Error initializing Pi SDK")
       }
     }
 
@@ -39,71 +90,76 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   }, [open])
 
   const verifyPiUser = async (accessToken: string) => {
-    // For development: Check if we're in localhost
-    const isLocalhost = window.location.hostname === 'localhost'
-    const baseUrl = isLocalhost ? 'http://localhost:8888' : ''
-    // REMOVED .cjs EXTENSION - Netlify functions don't use file extensions in routes
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    const baseUrl = isLocalhost ? "http://localhost:8888" : ""
     const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`
 
-    console.log('[DEBUG] Calling Netlify function:', functionUrl)
+    console.log("[Verify] Calling:", functionUrl)
 
     try {
       const verificationResponse = await fetch(functionUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         body: JSON.stringify({ accessToken })
       })
 
-      console.log('[DEBUG] Response status:', verificationResponse.status)
+      console.log("[Verify] Status:", verificationResponse.status)
 
-      // Get response as text first
       const responseText = await verificationResponse.text()
-      console.log('[DEBUG] Raw response:', responseText.substring(0, 200))
+      console.log("[Verify] Response:", responseText.substring(0, 200))
 
       if (!verificationResponse.ok) {
-        console.error('[DEBUG] Response not OK:', responseText)
+        console.error("[Verify] Error response:", responseText)
         throw new Error(`Server error: ${verificationResponse.status}`)
       }
 
-      // Try to parse as JSON
       try {
         return JSON.parse(responseText)
       } catch (parseError) {
-        console.error('[DEBUG] JSON parse failed:', parseError, 'Text was:', responseText)
-        throw new Error('Invalid JSON response from server')
+        console.error("[Verify] JSON parse failed:", parseError)
+        throw new Error("Invalid JSON response from server")
       }
     } catch (error) {
-      console.error('[DEBUG] Fetch error:', error)
+      console.error("[Verify] Fetch error:", error)
       throw error
     }
   }
 
   const handleConnect = async () => {
     setLoading(true)
+    setSdkError(null)
+
     try {
-      if (!window.Pi || !piInitialized) {
-        throw new Error("Pi SDK not loaded")
+      if (!window.Pi) {
+        throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
 
-      const scopes = ['username', 'payments']
+      if (!piInitialized) {
+        throw new Error("Pi SDK not initialized yet. Please wait.")
+      }
+
+      console.log("[Auth] Starting Pi authentication...")
+
+      const scopes = ["username", "payments"]
       const onIncompletePaymentFound = (payment: any) => {
-        console.log("Incomplete payment found during auth:", payment)
+        console.log("[Auth] Incomplete payment found:", payment)
       }
 
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
-      console.log("Pi authentication successful:", authResult.user)
+      console.log("[Auth] Success:", authResult.user)
 
-      // Send the accessToken to your backend for verification
       const verifiedData = await verifyPiUser(authResult.accessToken)
-      console.log("Pi user verified:", verifiedData.user)
+      console.log("[Auth] User verified:", verifiedData.user)
 
       setStep("role")
     } catch (error: any) {
-      console.error("Authentication failed:", error.message || error)
-      alert(`Authentication failed: ${error.message || 'Please try again'}`)
+      console.error("[Auth] Failed:", error)
+      const errorMessage = error.message || error.toString()
+      setSdkError(errorMessage)
+      alert(`Authentication failed: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -111,22 +167,29 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
   const handleRoleSelect = async (role: "creator" | "collector") => {
     setLoading(true)
+    setSdkError(null)
+
     try {
-      if (!window.Pi || !piInitialized) {
-        throw new Error("Pi SDK not loaded")
+      if (!window.Pi) {
+        throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
 
-      const scopes = ['username', 'payments']
+      if (!piInitialized) {
+        throw new Error("Pi SDK not initialized yet. Please wait.")
+      }
+
+      console.log("[Role] Authenticating for role:", role)
+
+      const scopes = ["username", "payments"]
       const onIncompletePaymentFound = (payment: any) => {
-        console.log("Incomplete payment found during auth:", payment)
+        console.log("[Role] Incomplete payment found:", payment)
       }
 
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
-      console.log("Pi authentication successful:", authResult.user)
+      console.log("[Role] Auth success:", authResult.user)
 
-      // Send the accessToken to your backend for verification
       const verifiedData = await verifyPiUser(authResult.accessToken)
-      console.log("Pi user verified:", verifiedData.user)
+      console.log("[Role] User verified:", verifiedData.user)
 
       setUser({
         uid: verifiedData.user.uid,
@@ -134,11 +197,14 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         accessToken: authResult.accessToken,
         role: role
       })
+
       onOpenChange(false)
       setTimeout(() => setStep("connect"), 300)
     } catch (error: any) {
-      console.error("Role selection failed:", error.message || error)
-      alert(`Role selection failed: ${error.message || 'Please try again'}`)
+      console.error("[Role] Failed:", error)
+      const errorMessage = error.message || error.toString()
+      setSdkError(errorMessage)
+      alert(`Role selection failed: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -167,25 +233,27 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 </p>
               </div>
 
-              {/* Browser detection info */}
-              <div className="bg-muted rounded-lg p-2.5 sm:p-3 text-xs">
-                <p className="text-muted-foreground text-center">
-                  {piInitialized ? (
+              <div className={`rounded-lg p-2.5 sm:p-3 text-xs ${sdkError ? 'bg-destructive/10 border border-destructive/20' : 'bg-muted'}`}>
+                <p className={`text-center ${sdkError ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {sdkError ? (
+                    <span className="flex items-center justify-center gap-1.5 sm:gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      {sdkError}
+                    </span>
+                  ) : piInitialized ? (
                     <span className="flex items-center justify-center gap-1.5 sm:gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                      Pi Browser Detected
+                      Pi SDK Ready
                     </span>
                   ) : (
-                    <span>
-                      Loading Pi SDK... {typeof window !== 'undefined' && window.Pi ? "Ready" : "Please use Pi Browser"}
-                    </span>
+                    <span>Loading Pi SDK...</span>
                   )}
                 </p>
               </div>
 
               <Button
                 onClick={handleConnect}
-                disabled={loading || !piInitialized}
+                disabled={loading || !piInitialized || !!sdkError}
                 size="lg"
                 className="w-full text-sm sm:text-base min-h-[44px]"
               >
