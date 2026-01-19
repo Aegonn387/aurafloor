@@ -29,6 +29,13 @@ declare global {
     metadata: Record<string, any>;
   }
 
+  interface PiPaymentCallbacks {
+    onReadyForServerApproval?: (paymentId: string) => void | Promise<void>;
+    onReadyForServerCompletion?: (paymentId: string, txid: string) => void | Promise<void>;
+    onCancel?: (paymentId: string) => void | Promise<void>;
+    onError?: (error: Error, payment?: PiPayment) => void | Promise<void>;
+  }
+
   interface PiAuthResult {
     accessToken: string;
     user: {
@@ -49,7 +56,10 @@ declare global {
         scopes: string[],
         onIncompletePaymentFound?: (payment: PiPayment) => void
       ) => Promise<PiAuthResult>;
-      createPayment: (options: PiCreatePaymentOptions) => Promise<PiPayment>;
+      createPayment: (
+        options: PiCreatePaymentOptions,
+        callbacks?: PiPaymentCallbacks
+      ) => Promise<PiPayment>;
       openShareDialog: (title: string, message: string) => void;
     };
   }
