@@ -37,8 +37,14 @@ declare global {
     };
   }
 
+  interface PiInitOptions {
+    version: string;
+    sandbox?: boolean;
+  }
+
   interface Window {
     Pi?: {
+      init: (options: PiInitOptions) => void;
       authenticate: (
         scopes: string[],
         onIncompletePaymentFound?: (payment: PiPayment) => void
