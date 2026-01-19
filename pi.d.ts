@@ -33,7 +33,7 @@ declare global {
     onReadyForServerApproval?: (paymentId: string) => void | Promise<void>;
     onReadyForServerCompletion?: (paymentId: string, txid: string) => void | Promise<void>;
     onCancel?: (paymentId: string) => void | Promise<void>;
-    onError?: (error: Error, payment?: PiPayment) => void | Promise<void>;
+    onError?: (error: Error, paymentId: string) => void | Promise<void>;
   }
 
   interface PiAuthResult {
