@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Header } from "@/components/header"
@@ -16,16 +16,20 @@ import { mockTracks } from "@/lib/mock-data"
 import { Megaphone, Target, TrendingUp, Eye, Zap, CheckCircle2, Music2, ArrowRight, Info } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { PiAuth } from "@/lib/pi-auth"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PromotePage() {
   const router = useRouter()
   const user = useStore((state) => state.user)
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [selectedNFT, setSelectedNFT] = useState("")
   const [duration, setDuration] = useState("7")
   const [budget, setBudget] = useState("50")
   const [targetAudience, setTargetAudience] = useState("")
   const [promotionGoal, setPromotionGoal] = useState("")
+  const [loading, setLoading] = useState(false)
 
   if (user?.role !== "creator") {
     return (
@@ -53,9 +57,55 @@ export default function PromotePage() {
   const progress = (step / totalSteps) * 100
   const estimatedCost = Number.parseInt(budget) * Number.parseInt(duration)
 
-  const handleSubmit = () => {
-    // Simulate submission
-    setStep(5)
+  const handleSubmit = async () => {
+    setLoading(true)
+
+    try {
+      if (!window.Pi) {
+        toast({
+          title: "Pi SDK not loaded",
+          description: "Please refresh the page and try again",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      const selectedTrack = creatorNFTs.find((t) => t.id === selectedNFT)
+
+      const paymentId = await PiAuth.createPayment({
+        amount: estimatedCost,
+        memo: `Promote "${selectedTrack?.title}" for ${duration} days`,
+        metadata: {
+          type: "promotion",
+          nftId: selectedNFT,
+          duration: duration,
+          dailyBudget: budget,
+          totalCost: estimatedCost,
+          goal: promotionGoal,
+          audience: targetAudience,
+          userId: user.uid, // FIXED: Changed from user.id to user.uid
+        },
+      })
+
+      console.log("Promotion payment created:", paymentId)
+
+      toast({
+        title: "Campaign Launched!",
+        description: `Your promotion for ${selectedTrack?.title} is now live`,
+      })
+
+      setStep(5)
+    } catch (error) {
+      console.error("Campaign launch failed:", error)
+      toast({
+        title: "Launch Failed",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -350,8 +400,8 @@ export default function PromotePage() {
                 <Button variant="outline" onClick={() => setStep(3)} className="flex-1">
                   Back
                 </Button>
-                <Button onClick={handleSubmit} className="flex-1">
-                  Launch Campaign
+                <Button onClick={handleSubmit} disabled={loading} className="flex-1">
+                  {loading ? "Processing..." : "Launch Campaign"}
                   <Megaphone className="w-4 h-4 ml-2" />
                 </Button>
               </div>
@@ -367,7 +417,7 @@ export default function PromotePage() {
               </div>
               <h2 className="text-2xl font-bold mb-2">Campaign Launched!</h2>
               <p className="text-muted-foreground mb-8">
-                Your NFT promotion is now live. You'll start seeing results within 24 hours.
+                Your NFT promotion is now live. You&apos;ll start seeing results within 24 hours.
               </p>
 
               <div className="grid grid-cols-3 gap-4 mb-8">
@@ -404,48 +454,46 @@ export default function PromotePage() {
           </Card>
         )}
 
-        {step === 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Why Promote?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Zap className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Homepage Featured</p>
-                  <p className="text-sm text-muted-foreground">
-                    Get priority placement in the promoted section on homepage
-                  </p>
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Why Promote?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Zap className="w-5 h-5 text-primary" />
               </div>
-              <div className="flex gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Eye className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Maximum Visibility</p>
-                  <p className="text-sm text-muted-foreground">
-                    Reach thousands of collectors browsing the marketplace
-                  </p>
-                </div>
+              <div>
+                <p className="font-semibold mb-1">Homepage Featured</p>
+                <p className="text-sm text-muted-foreground">
+                  Get priority placement in the promoted section on homepage
+                </p>
               </div>
-              <div className="flex gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Boost Sales</p>
-                  <p className="text-sm text-muted-foreground">
-                    Increase your NFT sales with targeted promotion campaigns
-                  </p>
-                </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <Eye className="w-5 h-5 text-primary" />
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div>
+                <p className="font-semibold mb-1">Maximum Visibility</p>
+                <p className="text-sm text-muted-foreground">
+                  Reach thousands of collectors browsing the marketplace
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold mb-1">Boost Sales</p>
+                <p className="text-sm text-muted-foreground">
+                  Increase your NFT sales with targeted promotion campaigns
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </main>
 
       <MobileNav />

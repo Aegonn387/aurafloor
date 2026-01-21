@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"

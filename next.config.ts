@@ -1,13 +1,37 @@
-import type { NextConfig } from 'next'
+﻿import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // REMOVED: output: 'export' - using standard Next.js build
   trailingSlash: true,
   images: {
     unoptimized: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,  // Still ignore TypeScript errors
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules',
+          '**/.next',
+          '/data/**',
+          '/data/data/**',
+        ].filter(Boolean)
+      }
+    }
+    
+    config.infrastructureLogging = {
+      level: 'error',
+    }
+    
+    return config
+  },
+  async redirects() {
+    return [
+      {
+        source: '/.well-known/:path*',
+        destination: '/well-known/:path*',
+        permanent: true,
+      },
+    ]
   },
 }
 

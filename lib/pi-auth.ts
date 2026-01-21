@@ -1,4 +1,4 @@
-export interface PiUser {
+﻿export interface PiUser {
   uid: string
   username: string
   accessToken: string
@@ -11,45 +11,114 @@ export interface PiPayment {
   metadata: Record<string, unknown>
 }
 
-// Mock Pi SDK for development (replace with actual Pi SDK in production)
 export const PiAuth = {
   isAvailable: () => {
-    // Check if running in Pi Browser
     if (typeof window === "undefined") return false
-    return "Pi" in window || navigator.userAgent.includes("PiBrowser")
+    return "Pi" in window
   },
 
   getBrowserInfo: () => {
     if (typeof window === "undefined") return { isPiBrowser: false, userAgent: "" }
     return {
-      isPiBrowser: navigator.userAgent.includes("PiBrowser") || "Pi" in window,
+      isPiBrowser: "Pi" in window,
       userAgent: navigator.userAgent,
     }
   },
 
   authenticate: async (): Promise<PiUser> => {
-    // In production, use: await window.Pi.authenticate(scopes, onIncompletePaymentFound)
-    // For now, using mock implementation for development
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          uid: "demo_user_" + Math.random().toString(36).substr(2, 9),
-          username: "DemoUser" + Math.floor(Math.random() * 1000),
-          accessToken: "demo_token_" + Date.now(),
-        })
-      }, 500)
-    })
+    if (!window.Pi) {
+      throw new Error("Pi SDK not available")
+    }
+
+    const scopes = ["username", "payments"]
+    const onIncompletePaymentFound = (payment: any) => {
+      console.log("Incomplete payment found:", payment)
+    }
+
+    try {
+      const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
+      console.log("Pi authentication successful:", auth)
+      
+      return {
+        uid: auth.user.uid,
+        username: auth.user.username,
+        accessToken: auth.accessToken,
+      }
+    } catch (error) {
+      console.error("Pi authentication failed:", error)
+      throw error
+    }
   },
 
   createPayment: async (payment: PiPayment): Promise<string> => {
-    // In production, use: await window.Pi.createPayment(payment, callbacks)
-    console.log("[v0] Creating Pi payment:", payment)
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const paymentId = "payment_" + Math.random().toString(36).substr(2, 9)
-        console.log("[v0] Payment created:", paymentId)
-        resolve(paymentId)
-      }, 1000)
-    })
+    if (!window.Pi) {
+      throw new Error("Pi SDK not available")
+    }
+
+    console.log("Creating Pi payment:", payment)
+
+    const paymentData = {
+      amount: payment.amount,
+      memo: payment.memo,
+      metadata: payment.metadata,
+    }
+
+    const callbacks = {
+      onReadyForServerApproval: async (paymentId: string) => {
+        console.log("Payment ready for approval:", paymentId)
+        
+        try {
+          const response = await fetch("/api/payments/approve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to approve payment")
+          }
+
+          console.log("Payment approved:", paymentId)
+        } catch (error) {
+          console.error("Payment approval failed:", error)
+          throw error
+        }
+      },
+      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+        console.log("Payment ready for completion:", paymentId, txid)
+        
+        try {
+          const response = await fetch("/.netlify/functions/complete-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId, txid }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to complete payment")
+          }
+
+          console.log("Payment completed:", paymentId)
+        } catch (error) {
+          console.error("Payment completion failed:", error)
+          throw error
+        }
+      },
+      onCancel: (paymentId: string) => {
+        console.log("Payment cancelled:", paymentId)
+      },
+      onError: (error: Error, payment?: any) => {
+        console.error("Payment error:", error, payment)
+      },
+    }
+
+    try {
+      const paymentResult = await window.Pi.createPayment(paymentData, callbacks)
+      console.log("Payment created:", paymentResult)
+      return paymentResult.identifier
+    } catch (error) {
+      console.error("Failed to create payment:", error)
+      throw error
+    }
   },
 }

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -65,7 +65,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
           console.log("Payment ready for approval:", paymentId);
           
           // Call backend to approve the payment
-          const response = await fetch('/.netlify/functions/approve-payment.cjs', {
+          const response = await fetch('/api/payments/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId })
@@ -82,7 +82,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
           console.log("Payment ready for completion:", paymentId, txid);
           
           // Call backend to complete the payment
-          const response = await fetch('/.netlify/functions/complete-payment.cjs', {
+          const response = await fetch('/.netlify/functions/complete-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid })
@@ -119,7 +119,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
       toast({
         title: "Tip sent!",
-        description: `You tipped ${amount}π to ${artistName}`,
+        description: `You tipped ${amount}Ï€ to ${artistName}`,
       })
 
       onOpenChange(false)
@@ -158,7 +158,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                 }}
                 className="h-12 sm:h-14 flex flex-col min-h-[48px]"
               >
-                <span className="text-base sm:text-lg font-bold">{amount}π</span>
+                <span className="text-base sm:text-lg font-bold">{amount}Ï€</span>
               </Button>
             ))}
           </div>

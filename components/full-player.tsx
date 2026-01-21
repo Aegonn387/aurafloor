@@ -1,37 +1,35 @@
+﻿"use client"
 
-"use client"
-
-import { useStore } from "@/lib/store"
+import { useState, useEffect, useCallback } from "react"
+import { getGlobalAudio } from "@/lib/audio-manager"
+import { TipModal } from "./tip-modal"
+import Link from "next/link"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Slider } from "@/components/ui/slider"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import {
   Play,
   Pause,
   SkipBack,
   SkipForward,
-  Minimize2,
-  Heart,
-  Share2,
   Volume2,
+  VolumeX,
+  Volume1,
   Repeat,
   Shuffle,
-  ListMusic,
+  ChevronDown,
+  Heart,
+  Share2,
   Info,
-  Download,
-  Gift,
-  X,
-  AlertCircle,
-  Loader2,
   ExternalLink,
   Copy,
   Check,
+  Download,
+  X
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { useState, useEffect, useCallback } from "react"
-import { TipModal } from "./tip-modal"
-import Link from "next/link"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useStore } from "@/lib/store"
 
 type StreamStatus = "loading" | "ready" | "error" | "buffering"
 
@@ -70,12 +68,13 @@ export function FullPlayer() {
   // Initialize audio element
   useEffect(() => {
     if (!audioElement) {
-      const audio = new Audio()
+      const audio = getGlobalAudio()
       audio.volume = volume / 100
       audio.preload = "metadata"
       setAudioElement(audio)
     }
 
+    // Don't destroy audio element, it's shared
     return () => {
       // Don't destroy audio element, just pause it
       if (audioElement && !isMiniPlayer) {
@@ -101,671 +100,557 @@ export function FullPlayer() {
 
         if (!response.ok) {
           if (response.status === 403) {
-            throw new Error("You don't have access to this track. Purchase to listen.")
-          } else if (response.status === 429) {
-            throw new Error("Free tier limit reached. Please wait or upgrade to Pro.")
+            throw new Error("You don't have access to this track. Please purchase it first.")
           }
-          throw new Error("Failed to load stream")
+          throw new Error("Failed to fetch stream URL")
         }
 
         const data = await response.json()
 
         if (!data.streamUrl) {
-          throw new Error("No stream URL received")
+          throw new Error("No stream available")
         }
 
         setCurrentStreamUrl(data.streamUrl, data.quality)
-
-        if (audioElement && data.streamUrl) {
-          audioElement.src = data.streamUrl
-          audioElement.load()
-          setStreamStatus("ready")
-
-          if (isPlaying) {
-            const playPromise = audioElement.play()
-            if (playPromise !== undefined) {
-              playPromise.catch((err) => {
-                console.error("Playback failed:", err)
-                setError("Playback failed. Please try again.")
-                setStreamStatus("error")
-              })
-            }
-          }
-        }
+        setStreamStatus("ready")
       } catch (err) {
-        console.error("Failed to fetch stream URL:", err)
-        setError(err instanceof Error ? err.message : "Failed to load audio")
+        console.error("Stream fetch failed:", err)
+        setError(err instanceof Error ? err.message : "Stream error")
         setStreamStatus("error")
       }
     }
 
     fetchStreamUrl()
-  }, [currentTrack, setCurrentStreamUrl, audioElement, isPlaying])
+  }, [currentTrack, setCurrentStreamUrl])
 
-  // Handle play/pause
+  // Handle audio playback
   useEffect(() => {
-    if (!audioElement || streamStatus !== "ready") return
+    if (!audioElement || !currentStreamUrl) return
 
-    if (isPlaying && !adPlaying) {
-      const playPromise = audioElement.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.error("Playback error:", err)
-          setIsPlaying(false)
+    const handleCanPlay = () => {
+      setStreamStatus("ready")
+      if (isPlaying) {
+        audioElement.play().catch((err) => {
+          console.error("Playback failed:", err)
+          setStreamStatus("error")
         })
       }
-    } else if (!adPlaying) {
-      audioElement.pause()
     }
-  }, [isPlaying, audioElement, streamStatus, adPlaying])
 
-  // Update volume
+    const handlePlay = () => setIsPlaying(true)
+    const handlePause = () => setIsPlaying(false)
+    const handleEnded = () => {
+      // TODO: Implement track ended logic
+      console.log("Track ended")
+    }
+
+    const handleTimeUpdate = () => {
+      if (audioElement.duration) {
+        const newProgress = (audioElement.currentTime / audioElement.duration) * 100
+        setProgress(newProgress)
+      }
+    }
+
+    const handleError = () => {
+      setStreamStatus("error")
+      setError("Playback error occurred")
+    }
+
+    audioElement.src = currentStreamUrl
+    audioElement.addEventListener("canplay", handleCanPlay)
+    audioElement.addEventListener("play", handlePlay)
+    audioElement.addEventListener("pause", handlePause)
+    audioElement.addEventListener("ended", handleEnded)
+    audioElement.addEventListener("timeupdate", handleTimeUpdate)
+    audioElement.addEventListener("error", handleError)
+
+    // Log stream analytics
+    const logStream = async () => {
+      if (!streamLogged && currentTrack) {
+        try {
+          await fetch("/api/analytics/stream", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              trackId: currentTrack.id,
+              userId: "demo-user", // TODO: Replace with actual user ID
+              timestamp: Date.now(),
+              quality: currentQuality
+            })
+          })
+          setStreamLogged(true)
+        } catch (err) {
+          console.error("Failed to log stream:", err)
+        }
+      }
+    }
+
+    logStream()
+
+    return () => {
+      audioElement.removeEventListener("canplay", handleCanPlay)
+      audioElement.removeEventListener("play", handlePlay)
+      audioElement.removeEventListener("pause", handlePause)
+      audioElement.removeEventListener("ended", handleEnded)
+      audioElement.removeEventListener("timeupdate", handleTimeUpdate)
+      audioElement.removeEventListener("error", handleError)
+    }
+  }, [audioElement, currentStreamUrl, isPlaying, setIsPlaying, currentTrack, currentQuality, streamLogged])
+
+  // Handle ads
+  useEffect(() => {
+    if (!currentTrack || adPlaying) return
+
+    const checkAd = () => {
+      const currentTime = audioElement?.currentTime || 0
+      const adTime = Math.floor(currentTime)
+
+      // Play ad every 60 seconds (for demo)
+      if (adTime > 0 && adTime % 60 === 0 && !playedAds.includes(adTime)) {
+        setAdPlaying(true)
+        setPlayedAds([...playedAds, adTime])
+
+        // Simulate ad playback
+        setTimeout(() => {
+          setAdPlaying(false)
+        }, 5000) // 5-second ad
+      }
+    }
+
+    const interval = setInterval(checkAd, 1000)
+    return () => clearInterval(interval)
+  }, [currentTrack, audioElement, adPlaying, playedAds])
+
+  // Update volume when changed
   useEffect(() => {
     if (audioElement) {
       audioElement.volume = volume / 100
     }
   }, [volume, audioElement])
 
-  // Audio event listeners
+  // Handle keyboard shortcuts
   useEffect(() => {
-    if (!audioElement || !currentTrack) return
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!currentTrack) return
 
-    const updateProgress = () => {
-      if (audioElement.duration && !isNaN(audioElement.duration)) {
-        const prog = (audioElement.currentTime / audioElement.duration) * 100
-        setProgress(prog || 0)
+      switch (e.key) {
+        case " ":
+          e.preventDefault()
+          setIsPlaying(!isPlaying)
+          break
+        case "ArrowRight":
+          if (e.ctrlKey) {
+            e.preventDefault()
+            // Next track
+            const currentIndex = queue.findIndex(t => t.id === currentTrack?.id)
+            if (currentIndex < queue.length - 1) {
+              setCurrentTrack(queue[currentIndex + 1])
+            }
+          }
+          break
+        case "ArrowLeft":
+          if (e.ctrlKey) {
+            e.preventDefault()
+            // Previous track
+            const currentIndex = queue.findIndex(t => t.id === currentTrack?.id)
+            if (currentIndex > 0) {
+              setCurrentTrack(queue[currentIndex - 1])
+            }
+          }
+          break
+        case "m":
+          e.preventDefault()
+          setVolume(volume === 0 ? 80 : 0)
+          break
       }
     }
 
-    const handleWaiting = () => setStreamStatus("buffering")
-    const handleCanPlay = () => setStreamStatus("ready")
-    const handleError = () => {
-      setError("Audio playback error")
-      setStreamStatus("error")
-      setIsPlaying(false)
-    }
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [currentTrack, isPlaying, setIsPlaying, queue, setCurrentTrack, volume])
 
-    const handleEnded = () => {
-      setIsPlaying(false)
-      setProgress(0)
-
-      // Auto-play next track if in queue
-      if (queue.length > 0 && !repeat) {
-        handleNext()
-      } else if (repeat) {
-        audioElement.currentTime = 0
-        setIsPlaying(true)
-      }
-    }
-
-    audioElement.addEventListener("timeupdate", updateProgress)
-    audioElement.addEventListener("waiting", handleWaiting)
-    audioElement.addEventListener("canplay", handleCanPlay)
-    audioElement.addEventListener("error", handleError)
-    audioElement.addEventListener("ended", handleEnded)
-
-    return () => {
-      audioElement.removeEventListener("timeupdate", updateProgress)
-      audioElement.removeEventListener("waiting", handleWaiting)
-      audioElement.removeEventListener("canplay", handleCanPlay)
-      audioElement.removeEventListener("error", handleError)
-      audioElement.removeEventListener("ended", handleEnded)
-    }
-  }, [audioElement, currentTrack, queue, repeat, setIsPlaying])
-
-  // Log stream for analytics after 30 seconds
-  useEffect(() => {
-    if (!isPlaying || !currentTrack || streamLogged || adPlaying) return
-
-    const timer = setTimeout(async () => {
-      try {
-        await fetch("/api/analytics/stream", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackId: currentTrack.id,
-            userId: "demo-user", // TODO: Replace with actual user ID
-            quality: currentQuality,
-            timestamp: Date.now(),
-            owned: currentTrack.owned || false,
-            duration: audioElement?.currentTime || 0,
-          }),
-        })
-        setStreamLogged(true)
-      } catch (err) {
-        console.error("Failed to log stream:", err)
-      }
-    }, 30000)
-
-    return () => clearTimeout(timer)
-  }, [isPlaying, currentTrack, streamLogged, currentQuality, audioElement, adPlaying])
-
-  // Ad insertion for free tier (non-owned tracks)
-  useEffect(() => {
-    if (!audioElement || !currentTrack || currentTrack.owned || adPlaying) return
-
-    const adSchedule = [
-      currentTrack.duration * 0.25,
-      currentTrack.duration * 0.5,
-      currentTrack.duration * 0.75,
-    ]
-
-    const checkForAd = () => {
-      const currentTime = audioElement.currentTime
-      const shouldPlayAd = adSchedule.find(
-        (adTime) => Math.abs(currentTime - adTime) < 0.5 && !playedAds.includes(adTime)
-      )
-
-      if (shouldPlayAd && isPlaying) {
-        playAd(shouldPlayAd)
-      }
-    }
-
-    audioElement.addEventListener("timeupdate", checkForAd)
-    return () => audioElement.removeEventListener("timeupdate", checkForAd)
-  }, [audioElement, currentTrack, playedAds, isPlaying, adPlaying])
-
-  const playAd = async (adTime: number) => {
+  const handlePlayPause = useCallback(() => {
     if (!audioElement) return
 
-    const trackPosition = audioElement.currentTime
-    setAdPlaying(true)
-    setIsPlaying(false)
-    audioElement.pause()
-
-    try {
-      // Fetch ad URL from your ad server
-      const adResponse = await fetch("/api/ads/get-ad")
-      const adData = await adResponse.json()
-
-      if (adData.adUrl) {
-        const adAudio = new Audio(adData.adUrl)
-        adAudio.volume = volume / 100
-
-        await new Promise<void>((resolve) => {
-          adAudio.onended = () => resolve()
-          adAudio.play()
-        })
-
-        // Log ad impression for revenue tracking
-        await fetch("/api/ads/log-impression", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackId: currentTrack?.id,
-            adId: adData.adId,
-            userId: "demo-user",
-            timestamp: Date.now(),
-          }),
-        })
-      }
-    } catch (err) {
-      console.error("Ad playback failed:", err)
-    }
-
-    setPlayedAds([...playedAds, adTime])
-    audioElement.currentTime = trackPosition
-    setAdPlaying(false)
-    setIsPlaying(true)
-  }
-
-  const handleNext = useCallback(() => {
-    if (queue.length > 0) {
-      const nextTrack = shuffle ? queue[Math.floor(Math.random() * queue.length)] : queue[0]
-      setCurrentTrack(nextTrack)
-      setQueue(queue.filter((t) => t.id !== nextTrack.id))
-    }
-  }, [queue, shuffle, setCurrentTrack, setQueue])
-
-  const handlePrevious = useCallback(() => {
-    if (audioElement && audioElement.currentTime > 3) {
-      audioElement.currentTime = 0
+    if (isPlaying) {
+      audioElement.pause()
     } else {
-      // TODO: Implement previous track from history
+      audioElement.play().catch((err) => {
+        console.error("Playback failed:", err)
+        setStreamStatus("error")
+      })
     }
-  }, [audioElement])
+  }, [audioElement, isPlaying])
 
-  const handleDownload = async () => {
-    if (!currentTrack?.owned) return
+  const handleSeek = (value: number[]) => {
+    const newProgress = value[0]
+    setProgress(newProgress)
 
-    try {
-      setDownloadProgress(0)
-      const response = await fetch(`/api/download/${currentTrack.id}`)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${currentTrack.artist} - ${currentTrack.title}.flac`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      setDownloadProgress(null)
-    } catch (err) {
-      console.error("Download failed:", err)
-      setError("Download failed. Please try again.")
-      setDownloadProgress(null)
+    if (audioElement && !isNaN(audioElement.duration)) {
+      audioElement.currentTime = (newProgress / 100) * audioElement.duration
     }
   }
 
-  const copyToClipboard = (text: string, field: string) => {
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0]
+    setVolume(newVolume)
+  }
+
+  const handleToggleMute = () => {
+    setVolume(volume === 0 ? 80 : 0)
+  }
+
+  const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text)
     setCopiedField(field)
     setTimeout(() => setCopiedField(null), 2000)
   }
 
-  if (!currentTrack || isMiniPlayer) return null
+  const handleDownload = async () => {
+    if (!currentStreamUrl || !currentTrack) return
 
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return "0:00"
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+    try {
+      const response = await fetch(currentStreamUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${currentTrack.title} - ${currentTrack.artist}.mp3`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error("Download failed:", err)
+      setError("Download failed")
+    }
   }
 
-  const currentTime = audioElement?.currentTime || 0
-  const duration = audioElement?.duration || currentTrack.duration
+  const handleTip = () => {
+    setTipModalOpen(true)
+  }
+
+  if (!currentTrack) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-900 to-black p-8">
+        <div className="text-center text-gray-400">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 flex items-center justify-center">
+            <Play className="w-12 h-12" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No Track Selected</h3>
+          <p className="text-gray-500">Select a track to start listening</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <div className="fixed inset-0 bg-gradient-to-b from-primary/20 via-background to-background z-50 flex flex-col overflow-auto">
-        <div className="flex items-center justify-between p-4 border-b backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsMiniPlayer(true)}>
-              <Minimize2 className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setCurrentTrack(null)
-                if (audioElement) {
-                  audioElement.pause()
-                  audioElement.src = ""
-                }
-              }}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs">
-              {currentQuality || "HD Audio"}
-            </Badge>
-            {currentTrack.edition && currentTrack.totalEditions && (
-              <Badge variant="outline" className="text-xs">
-                Edition #{currentTrack.edition}/{currentTrack.totalEditions}
-              </Badge>
-            )}
-            {streamStatus === "buffering" && (
-              <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Buffering
-              </Badge>
-            )}
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setShowInfo(!showInfo)}>
-            <Info className={`w-5 h-5 ${showInfo ? "text-primary" : ""}`} />
+    <div className="flex flex-col h-full bg-gradient-to-b from-gray-900 to-black">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b border-gray-800">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMiniPlayer(true)}
+            className="text-gray-400 hover:text-white"
+          >
+            <ChevronDown className="w-5 h-5" />
           </Button>
+          <h2 className="text-xl font-semibold">Now Playing</h2>
         </div>
-
-        <div className="flex-1 flex flex-col items-center justify-start p-6 pb-safe overflow-auto">
-          <div className="w-full max-w-md space-y-6">
-            {error && (
-              <Alert variant="destructive" className="animate-in slide-in-from-top">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="relative">
-              {streamStatus === "loading" && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
-                  <Loader2 className="w-12 h-12 text-white animate-spin" />
-                </div>
-              )}
-              <img
-                src={currentTrack.coverUrl || "/placeholder.svg"}
-                alt={currentTrack.title}
-                className="w-full aspect-square rounded-2xl shadow-2xl object-cover animate-in fade-in duration-500"
-              />
-              {currentTrack.owned && <Badge className="absolute top-4 right-4 bg-primary shadow-lg">Owned</Badge>}
-              {!currentTrack.owned && (
-                <Badge className="absolute top-4 right-4 bg-yellow-500 shadow-lg">Free Tier</Badge>
-              )}
-              {currentTrack.edition && currentTrack.totalEditions && (
-                <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                  <p className="text-white text-xs font-medium">
-                    {currentTrack.totalEditions === 1
-                      ? "1 of 1 Edition"
-                      : `Edition ${currentTrack.edition} of ${currentTrack.totalEditions}`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="text-center space-y-3">
-              <h2 className="text-2xl font-bold text-balance">{currentTrack.title}</h2>
-              <p className="text-lg text-muted-foreground">{currentTrack.artist}</p>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {currentTrack.category && (
-                  <Badge variant="secondary" className="text-xs">
-                    {currentTrack.category}
-                  </Badge>
-                )}
-                {currentTrack.price && (
-                  <Badge variant="outline" className="text-xs">
-                    {currentTrack.price}π
-                  </Badge>
-                )}
-              </div>
-              {currentTrack.streamCount && (
-                <p className="text-sm text-muted-foreground">
-                  {currentTrack.streamCount.toLocaleString()} streams
-                  {currentTrack.adRevenue && (
-                    <span className="text-primary ml-2">• {currentTrack.adRevenue}π earned from ads</span>
-                  )}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <Slider
-                value={[progress]}
-                onValueChange={(value) => {
-                  setProgress(value[0])
-                  if (audioElement && duration) {
-                    audioElement.currentTime = (value[0] / 100) * duration
-                  }
-                }}
-                max={100}
-                step={0.1}
-                className="w-full cursor-pointer"
-                disabled={streamStatus !== "ready"}
-              />
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground font-medium">{formatTime(currentTime)}</span>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{currentQuality || "Loading..."}</span>
-                  {!currentTrack.owned && (
-                    <>
-                      <span>•</span>
-                      <span>Ad-supported</span>
-                    </>
-                  )}
-                </div>
-                <span className="text-muted-foreground font-medium">{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-10 h-10"
-                  onClick={() => setShuffle(!shuffle)}
-                  disabled={queue.length === 0}
-                >
-                  <Shuffle className={`w-5 h-5 ${shuffle ? "text-primary" : ""}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12"
-                  onClick={handlePrevious}
-                  disabled={streamStatus !== "ready"}
-                >
-                  <SkipBack className="w-6 h-6" />
-                </Button>
-                <Button
-                  size="icon"
-                  className="w-16 h-16 rounded-full shadow-lg"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  disabled={streamStatus === "loading" || streamStatus === "error"}
-                >
-                  {streamStatus === "loading" ? (
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                  ) : isPlaying ? (
-                    <Pause className="w-8 h-8" />
-                  ) : (
-                    <Play className="w-8 h-8 ml-1" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12"
-                  onClick={handleNext}
-                  disabled={queue.length === 0 || streamStatus !== "ready"}
-                >
-                  <SkipForward className="w-6 h-6" />
-                </Button>
-                <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setRepeat(!repeat)}>
-                  <Repeat className={`w-5 h-5 ${repeat ? "text-primary" : ""}`} />
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-3 px-4">
-                <Volume2 className="w-4 h-4 text-muted-foreground" />
-                <Slider value={[volume]} onValueChange={(value) => setVolume(value[0])} max={100} className="flex-1" />
-                <span className="text-xs text-muted-foreground w-8 text-right">{volume}%</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className={`rounded-full bg-transparent ${isLiked ? "text-red-500" : ""}`}
-                onClick={() => setIsLiked(!isLiked)}
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
-              </Button>
-              <Button variant="outline" className="rounded-full bg-transparent" onClick={() => setTipModalOpen(true)}>
-                <Gift className="w-4 h-4 mr-2" />
-                Tip Artist
-              </Button>
-              {currentTrack.owned && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full bg-transparent"
-                  onClick={handleDownload}
-                  disabled={downloadProgress !== null}
-                >
-                  {downloadProgress !== null ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Download className="w-5 h-5" />
-                  )}
-                </Button>
-              )}
-              <Button variant="outline" size="icon" className="rounded-full bg-transparent">
-                <Share2 className="w-5 h-5" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full bg-transparent">
-                <ListMusic className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {showInfo && (
-              <div className="bg-card/50 backdrop-blur-sm rounded-lg p-4 space-y-3 border animate-in slide-in-from-top duration-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">NFT Details & Metadata</h3>
-                  <Link href={`/nft/${currentTrack.id}`}>
-                    <Button variant="ghost" size="sm" className="text-xs h-7">
-                      View Full Page
-                    </Button>
-                  </Link>
-                </div>
-                <Separator />
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">NFT ID</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-medium">#{currentTrack.id}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyToClipboard(currentTrack.id, "nftId")}
-                      >
-                        {copiedField === "nftId" ? (
-                          <Check className="w-3 h-3 text-green-500" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Creator</span>
-                    <span className="font-medium">{currentTrack.artist}</span>
-                  </div>
-                  {currentTrack.category && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Category</span>
-                      <span className="font-medium">{currentTrack.category}</span>
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Wallet Address</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs">GBXF...7K9M</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyToClipboard("GBXF7A8N2M4P5Q6R8S9T1U2V3W4X5Y6Z7K9M", "wallet")}
-                      >
-                        {copiedField === "wallet" ? (
-                          <Check className="w-3 h-3 text-green-500" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => window.open("https://pichain.network", "_blank")}
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Token Standard</span>
-                    <span className="font-medium">Protocol 23+</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Blockchain</span>
-                    <span className="font-medium">Pi Network</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Audio Format</span>
-                    <span className="font-medium">FLAC 24-bit/96kHz</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">File Size</span>
-                    <span className="font-medium">45.3 MB</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration</span>
-                    <span className="font-medium">{formatTime(currentTrack.duration)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">IPFS Hash</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs">Qm...7x9a</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyToClipboard("QmHash", "ipfs")}
-                      >
-                        {copiedField === "ipfs" ? (
-                          <Check className="w-3 h-3 text-green-500" />
-                        ) : (
-                          <Copy className="w-3 h-3" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  {currentTrack.resaleFee && (
-                    <>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Creator Royalty</span>
-                        <span className="font-medium text-primary">{currentTrack.resaleFee}%</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Creator earns {currentTrack.resaleFee}% on all secondary sales
-                      </p>
-                    </>
-                  )}
-                  {currentTrack.edition && currentTrack.totalEditions && (
-                    <>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Edition Type</span>
-                        <span className="font-medium">
-                          {currentTrack.totalEditions === 1 ? "1 of 1" : `Limited (${currentTrack.totalEditions})`}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">This Edition</span>
-                        <span className="font-medium">#{currentTrack.edition}</span>
-                      </div>
-                    </>
-                  )}
-                  {currentTrack.description && (
-                    <>
-                      <Separator />
-                      <div>
-                        <p className="text-muted-foreground text-xs mb-1">Description</p>
-                        <p className="text-muted-foreground text-xs leading-relaxed">{currentTrack.description}</p>
-                      </div>
-                    </>
-                  )}
-                  <Separator />
-                  <div className="bg-primary/10 rounded-lg p-3 space-y-1">
-                    <p className="text-xs font-medium">Revenue Split</p>
-                    <p className="text-xs text-muted-foreground">
-                      • Creator: 90% of sales
-                      <br />
-                      • Platform: 10% fee
-                      <br />
-                      {currentTrack.owned
-                        ? "• No ads (owned NFT)"
-                        : "• Ad Revenue: 40% to creator (free tier streams)"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-500/10 rounded-lg p-3 space-y-1">
-                    <p className="text-xs font-medium">License Terms</p>
-                    <p className="text-xs text-muted-foreground">
-                      • Personal streaming & download rights
-                      <br />
-                      • Resale rights included
-                      <br />• No commercial use without license
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsLiked(!isLiked)}
+            className={isLiked ? "text-red-500 hover:text-red-400" : "text-gray-400 hover:text-white"}
+          >
+            <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCopy(window.location.href, "share")}
+            className="text-gray-400 hover:text-white"
+          >
+            {copiedField === "share" ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowInfo(!showInfo)}
+            className="text-gray-400 hover:text-white"
+          >
+            <Info className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {/* Album Art */}
+        <div className="relative mb-8">
+          <div className="aspect-square max-w-md mx-auto rounded-2xl overflow-hidden shadow-2xl">
+            <img
+              src={currentTrack.coverUrl}
+              alt={currentTrack.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          {adPlaying && (
+            <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-2xl">
+              <div className="text-center p-8">
+                <div className="text-amber-500 font-bold text-lg mb-2">Advertisement</div>
+                <p className="text-gray-300">Your support helps creators</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Track Info */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">{currentTrack.title}</h1>
+          <p className="text-xl text-gray-300 mb-4">{currentTrack.artist}</p>
+
+          <div className="flex items-center justify-center gap-4 mb-6">
+            {currentQuality && (
+              <Badge variant="secondary" className="px-3 py-1">
+                {currentQuality}
+              </Badge>
+            )}
+            {currentTrack.edition && (
+              <Badge variant="outline" className="px-3 py-1">
+                Edition {currentTrack.edition}/{currentTrack.totalEditions}
+              </Badge>
+            )}
+            {currentTrack.streamCount && (
+              <Badge variant="outline" className="px-3 py-1">
+                {currentTrack.streamCount.toLocaleString()} streams
+              </Badge>
+            )}
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between text-sm text-gray-400 mb-2">
+              <span>{formatTime((progress / 100) * (currentTrack.duration || 0))}</span>
+              <span>{formatTime(currentTrack.duration || 0)}</span>
+            </div>
+            <Slider
+              value={[progress]}
+              onValueChange={handleSeek}
+              max={100}
+              step={0.1}
+              className="cursor-pointer"
+            />
+          </div>
+
+          {/* Player Controls */}
+          <div className="flex items-center justify-center gap-6 mb-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShuffle(!shuffle)}
+              className={`w-12 h-12 ${shuffle ? "text-purple-500" : "text-gray-400"}`}
+            >
+              <Shuffle className="w-6 h-6" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-12 h-12 text-gray-400"
+              // Previous track functionality
+            >
+              <SkipBack className="w-6 h-6" />
+            </Button>
+
+            <Button
+              variant="default"
+              size="icon"
+              onClick={handlePlayPause}
+              className="w-16 h-16 bg-white hover:bg-gray-200 text-black rounded-full"
+            >
+              {isPlaying ? (
+                <Pause className="w-8 h-8" />
+              ) : (
+                <Play className="w-8 h-8 ml-1" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-12 h-12 text-gray-400"
+              // Next track functionality
+            >
+              <SkipForward className="w-6 h-6" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRepeat(!repeat)}
+              className={`w-12 h-12 ${repeat ? "text-purple-500" : "text-gray-400"}`}
+            >
+              <Repeat className="w-6 h-6" />
+            </Button>
+          </div>
+
+          {/* Volume Control */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleMute}
+              className="text-gray-400 hover:text-white"
+            >
+              {volume === 0 ? (
+                <VolumeX className="w-5 h-5" />
+              ) : volume < 50 ? (
+                <Volume1 className="w-5 h-5" />
+              ) : (
+                <Volume2 className="w-5 h-5" />
+              )}
+            </Button>
+            <Slider
+              value={[volume]}
+              onValueChange={handleVolumeChange}
+              max={100}
+              step={1}
+              className="w-40 cursor-pointer"
+            />
+          </div>
+
+          {/* Status Indicators */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            {streamStatus === "loading" && (
+              <div className="flex items-center gap-2 text-amber-500">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                <span className="text-sm">Loading...</span>
+              </div>
+            )}
+            {streamStatus === "buffering" && (
+              <div className="flex items-center gap-2 text-blue-500">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <span className="text-sm">Buffering...</span>
+              </div>
+            )}
+            {streamStatus === "error" && (
+              <div className="flex items-center gap-2 text-red-500">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <span className="text-sm">Playback Error</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Additional Info */}
+        {showInfo && (
+          <div className="mt-8 pt-8 border-t border-gray-800">
+            <h3 className="text-lg font-semibold mb-4">Track Details</h3>
+            {currentTrack.description && (
+              <p className="text-gray-300 mb-4">{currentTrack.description}</p>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">Category</div>
+                <div className="font-medium">{currentTrack.category || "Uncategorized"}</div>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="text-sm text-gray-400 mb-1">Resale Fee</div>
+                <div className="font-medium">{currentTrack.resaleFee || 0}%</div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCopy(currentTrack.id, "id")}
+                className="text-gray-400 hover:text-white"
+              >
+                {copiedField === "id" ? (
+                  <Check className="w-4 h-4 mr-2" />
+                ) : (
+                  <Copy className="w-4 h-4 mr-2" />
+                )}
+                Copy ID
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownload}
+                className="text-gray-400 hover:text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTip}
+                className="text-gray-400 hover:text-white"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Tip Creator
+              </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="bg-gray-800/30 rounded-lg p-4">
+              <h4 className="font-medium mb-3">Stats</h4>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold">{currentTrack.likeCount || 0}</div>
+                  <div className="text-sm text-gray-400">Likes</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{currentTrack.streamCount || 0}</div>
+                  <div className="text-sm text-gray-400">Streams</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">${currentTrack.adRevenue || 0}</div>
+                  <div className="text-sm text-gray-400">Ad Revenue</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="p-4 border-t border-red-800/50 bg-red-900/20">
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setError(null)}
+              className="ml-4"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </Alert>
+        </div>
+      )}
+
+      {/* Tip Modal - FIXED: Changed props to match TipModalProps interface */}
       <TipModal
         open={tipModalOpen}
         onOpenChange={setTipModalOpen}
         artistName={currentTrack.artist}
         trackTitle={currentTrack.title}
       />
-    </>
+    </div>
   )
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }

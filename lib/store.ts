@@ -1,4 +1,4 @@
-import { create } from "zustand"
+﻿import { create } from "zustand"
 import type { PiUser } from "./pi-auth"
 
 export interface ExtendedPiUser extends PiUser {
@@ -80,15 +80,15 @@ interface AppStore {
   repeat: boolean
   shuffle: boolean
   showInfo: boolean
-  
+
   // Queue management
   queue: AudioTrack[]
-  
+
   // Stream analytics
   streamLogged: boolean
   adPlaying: boolean
   playedAds: number[]
-  
+
   // Liked tracks
   likedTracks: Set<string>
 
@@ -110,7 +110,7 @@ interface AppStore {
   setStreamLogged: (logged: boolean) => void
   setAdPlaying: (playing: boolean) => void
   setPlayedAds: (ads: number[]) => void
-  
+
   // Actions
   addToQueue: (track: AudioTrack) => void
   removeFromQueue: (trackId: string) => void
@@ -154,34 +154,34 @@ export const useStore = create<AppStore>((set, get) => ({
   repeat: false,
   shuffle: false,
   showInfo: false,
-  
+
   // Queue management
   queue: [],
-  
+
   // Stream analytics
   streamLogged: false,
   adPlaying: false,
   playedAds: [],
-  
+
   // Liked tracks
   likedTracks: new Set(),
 
   // Setters
-  setCurrentTrack: (track) => set({ 
+  setCurrentTrack: (track) => set({
     currentTrack: track,
     isPlaying: track !== null,
     progress: 0,
     streamStatus: track ? "loading" : "idle"
   }),
-  
+
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setIsMiniPlayer: (mini) => set({ isMiniPlayer: mini }),
-  
-  setCurrentStreamUrl: (url, quality) => set({ 
+
+  setCurrentStreamUrl: (url, quality) => set({
     currentStreamUrl: url,
-    currentQuality: quality 
+    currentQuality: quality
   }),
-  
+
   setAudioElement: (audio) => set({ audioElement: audio }),
   setProgress: (progress) => set({ progress }),
   setStreamStatus: (status) => set({ streamStatus: status }),
@@ -199,36 +199,36 @@ export const useStore = create<AppStore>((set, get) => ({
   // Actions
   addToQueue: (track) =>
     set((state) => ({ queue: [...state.queue, track] })),
-    
+
   removeFromQueue: (trackId) =>
-    set((state) => ({ 
-      queue: state.queue.filter(track => track.id !== trackId) 
+    set((state) => ({
+      queue: state.queue.filter(track => track.id !== trackId)
     })),
-    
+
   clearQueue: () => set({ queue: [] }),
-  
+
   playNext: () => {
     const { queue, currentTrack, setCurrentTrack } = get()
     if (queue.length === 0 || !currentTrack) return
-    
+
     const currentIndex = queue.findIndex(track => track.id === currentTrack.id)
     if (currentIndex === -1 || currentIndex === queue.length - 1) return
-    
+
     const nextTrack = queue[currentIndex + 1]
     setCurrentTrack(nextTrack)
   },
-  
+
   playPrevious: () => {
     const { queue, currentTrack, setCurrentTrack } = get()
     if (queue.length === 0 || !currentTrack) return
-    
+
     const currentIndex = queue.findIndex(track => track.id === currentTrack.id)
     if (currentIndex <= 0) return
-    
+
     const prevTrack = queue[currentIndex - 1]
     setCurrentTrack(prevTrack)
   },
-  
+
   seekTo: (progress) => {
     const { audioElement } = get()
     if (audioElement && !isNaN(audioElement.duration)) {
@@ -236,10 +236,10 @@ export const useStore = create<AppStore>((set, get) => ({
     }
     set({ progress })
   },
-  
+
   addPlayedAd: (adTime) =>
     set((state) => ({ playedAds: [...state.playedAds, adTime] })),
-    
+
   toggleLike: (trackId) =>
     set((state) => {
       const newLikedTracks = new Set(state.likedTracks)
@@ -250,7 +250,7 @@ export const useStore = create<AppStore>((set, get) => ({
       }
       return { likedTracks: newLikedTracks }
     }),
-    
+
   isLiked: (trackId) => {
     return get().likedTracks.has(trackId)
   },
@@ -260,12 +260,12 @@ export const useStore = create<AppStore>((set, get) => ({
   feedPosts: [],
   setPosts: (posts) => set({ posts }),
   setFeedPosts: (posts) => set({ feedPosts: posts }),
-  
+
   addPost: (post) =>
     set((state) => ({
       posts: [post, ...state.posts]
     })),
-    
+
   togglePostLike: (postId) =>
     set((state) => ({
       posts: state.posts.map((post) =>
@@ -278,7 +278,7 @@ export const useStore = create<AppStore>((set, get) => ({
           : post
       )
     })),
-    
+
   addComment: (postId, comment) =>
     set((state) => ({
       posts: state.posts.map((post) =>
@@ -290,7 +290,7 @@ export const useStore = create<AppStore>((set, get) => ({
           : post
       )
     })),
-    
+
   toggleCommentLike: (postId, commentId) =>
     set((state) => ({
       posts: state.posts.map((post) =>
@@ -310,7 +310,7 @@ export const useStore = create<AppStore>((set, get) => ({
           : post
       )
     })),
-    
+
   sharePost: (postId) => {
     const post = get().posts.find((p) => p.id === postId)
     if (post && typeof window !== 'undefined' && navigator.share) {

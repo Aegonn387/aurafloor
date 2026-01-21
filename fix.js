@@ -1,6 +1,6 @@
-/** @type {import('next').NextConfig} */
+﻿const fs = require('fs');
+const config = `/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Fix for Android/Termux permission errors
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       config.watchOptions = {
@@ -28,4 +28,5 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig;
+module.exports = nextConfig;`;
+fs.writeFileSync('next.config.js', config);

@@ -1,4 +1,4 @@
-
+﻿
 "use client"
 
 import { useStore } from "@/lib/store"
@@ -18,6 +18,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { useState, useEffect, useCallback } from "react"
+import { getGlobalAudio } from "@/lib/audio-manager"
+
 import { Badge } from "@/components/ui/badge"
 
 type StreamStatus = "loading" | "ready" | "error" | "buffering"
@@ -52,7 +54,7 @@ export function MiniPlayer() {
   // Initialize audio element (shared with FullPlayer)
   useEffect(() => {
     if (!audioElement) {
-      const audio = new Audio()
+      const audio = getGlobalAudio()
       audio.volume = volume / 100
       audio.preload = "metadata"
       setAudioElement(audio)
@@ -378,7 +380,7 @@ export function MiniPlayer() {
             <p className="font-semibold text-sm truncate">{currentTrack.title}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="truncate">{currentTrack.artist}</span>
-              <span className="text-primary">•</span>
+              <span className="text-primary">â€¢</span>
               <span className="shrink-0">
                 {streamStatus === "loading"
                   ? "Loading..."
@@ -389,7 +391,7 @@ export function MiniPlayer() {
 
               {currentTrack.edition && currentTrack.totalEditions && (
                 <>
-                  <span className="text-primary">•</span>
+                  <span className="text-primary">â€¢</span>
                   <span className="shrink-0">
                     #{currentTrack.edition}/{currentTrack.totalEditions}
                   </span>
@@ -398,7 +400,7 @@ export function MiniPlayer() {
 
               {!currentTrack.owned && (
                 <>
-                  <span className="text-primary">•</span>
+                  <span className="text-primary">â€¢</span>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1">
                     Free
                   </Badge>
