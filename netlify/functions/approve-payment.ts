@@ -1,4 +1,4 @@
-﻿import { Handler } from '@netlify/functions';
+import { Handler } from '@netlify/functions';
 import { neon } from '@neondatabase/serverless';
 
 // Initialize Neon database connection
@@ -39,7 +39,7 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
@@ -50,11 +50,11 @@ export const handler: Handler = async (event) => {
   try {
     // Parse request body
     const body = JSON.parse(event.body || '{}') as NFTMintRequest;
-    
+
     // Validate required fields
     const requiredFields = [
       'creatorWallet',
-      'title', 
+      'title',
       'price',
       'resaleFee',
       'audioData',
@@ -63,17 +63,17 @@ export const handler: Handler = async (event) => {
     ] as const;
 
     const missingFields = requiredFields.filter(field => !body[field]);
-    
+
     if (missingFields.length > 0) {
       return {
         statusCode: 400,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*' 
+          'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           error: 'Missing required fields',
-          missing: missingFields 
+          missing: missingFields
         })
       };
     }
@@ -82,12 +82,12 @@ export const handler: Handler = async (event) => {
     if (body.resaleFee < 500 || body.resaleFee > 1500) {
       return {
         statusCode: 400,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*' 
+          'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify({ 
-          error: 'Resale fee must be between 5% and 15% (500-1500)' 
+        body: JSON.stringify({
+          error: 'Resale fee must be between 5% and 15% (500-1500)'
         })
       };
     }
@@ -118,7 +118,7 @@ export const handler: Handler = async (event) => {
     const piResponse = await fetch('https://api.minepi.com/v2/payments', {
       method: 'POST',
       headers: {
-        'Authorization': Key ,
+        'Authorization': `Key ${piApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(paymentData),
@@ -136,12 +136,12 @@ export const handler: Handler = async (event) => {
 
     // 2. Convert base64 strings to buffers for BYTEA storage
     const audioBuffer = Buffer.from(body.audioData, 'base64');
-    const coverBuffer = body.coverData 
-      ? Buffer.from(body.coverData, 'base64') 
+    const coverBuffer = body.coverData
+      ? Buffer.from(body.coverData, 'base64')
       : null;
 
     // 3. Store NFT data in pending_nft_mints table
-    await sql
+    const insertQuery = `
       INSERT INTO pending_nft_mints (
         payment_id,
         creator_wallet,
@@ -160,24 +160,46 @@ export const handler: Handler = async (event) => {
         cover_filename,
         cover_content_type
       ) VALUES (
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        ,
-        
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13,
+        $14,
+        $15,
+        $16
       )
-    ;
+    `;
+
+    await sql(
+      insertQuery,
+      [
+        paymentId,
+        body.creatorWallet,
+        body.title,
+        body.description || null,
+        body.category || null,
+        body.price,
+        body.resaleFee,
+        body.editionType || null,
+        body.totalEditions || null,
+        body.monetization ? JSON.stringify(body.monetization) : null,
+        audioBuffer,
+        body.audioFilename,
+        body.audioContentType,
+        coverBuffer,
+        body.coverFilename || null,
+        body.coverContentType || null
+      ]
+    );
 
     console.log('[Approve Payment] NFT data stored for payment:', paymentId);
 
@@ -204,7 +226,7 @@ export const handler: Handler = async (event) => {
 
   } catch (error) {
     console.error('[Approve Payment] Error:', error);
-    
+
     return {
       statusCode: 500,
       headers: {
@@ -219,7 +241,3 @@ export const handler: Handler = async (event) => {
     };
   }
 };
-
-
-
-
