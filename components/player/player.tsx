@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { MiniPlayer } from "./mini-player"
 import { FullPlayer } from "./full-player"
