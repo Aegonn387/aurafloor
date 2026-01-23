@@ -1,4 +1,4 @@
-[build]
+﻿[build]
   command = "npm run build"
   publish = ".next"
 
@@ -7,6 +7,9 @@
   port = 8888
   targetPort = 3000
   autoLaunch = false
+
+[functions]
+  external_node_modules = ["@pinata/sdk", "@stellar/stellar-sdk"]
 
 [[redirects]]
   from = "/api/*"
