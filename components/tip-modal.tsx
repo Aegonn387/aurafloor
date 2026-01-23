@@ -44,17 +44,17 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
     }
 
     setLoading(true)
-    
+
     try {
       // Note: User should already be authenticated via AuthDialog with 'payments' scope
       // We'll proceed directly to createPayment
-      
+
       const paymentData = {
         amount: amount,
         memo: `Tip for ${trackTitle} by ${artistName}`,
-        metadata: { 
-          type: "tip", 
-          artist: artistName, 
+        metadata: {
+          type: "tip",
+          artist: artistName,
           track: trackTitle,
           timestamp: new Date().toISOString()
         }
@@ -63,38 +63,38 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
       const callbacks = {
         onReadyForServerApproval: async (paymentId: string) => {
           console.log("Payment ready for approval:", paymentId);
-          
+
           // Call backend to approve the payment
           const response = await fetch('/api/payments/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId })
           });
-          
+
           if (!response.ok) {
             throw new Error('Payment approval failed');
           }
-          
+
           console.log("Payment approved on server");
         },
-        
+
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
           console.log("Payment ready for completion:", paymentId, txid);
-          
+
           // Call backend to complete the payment
           const response = await fetch('/.netlify/functions/complete-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid })
           });
-          
+
           if (!response.ok) {
             throw new Error('Payment completion failed');
           }
-          
+
           console.log("Payment completed on server");
         },
-        
+
         onCancel: (paymentId: string) => {
           console.log("Payment cancelled:", paymentId);
           toast({
@@ -102,7 +102,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
             description: "The payment was cancelled",
           });
         },
-        
+
         onError: (error: Error, paymentId: string) => {
           console.error("Payment error:", error, paymentId);
           toast({
@@ -119,7 +119,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
       toast({
         title: "Tip sent!",
-        description: `You tipped ${amount}Ï€ to ${artistName}`,
+        description: `You tipped ${amount}π to ${artistName}`,
       })
 
       onOpenChange(false)
@@ -158,7 +158,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                 }}
                 className="h-12 sm:h-14 flex flex-col min-h-[48px]"
               >
-                <span className="text-base sm:text-lg font-bold">{amount}Ï€</span>
+                <span className="text-base sm:text-lg font-bold">{amount}π</span>
               </Button>
             ))}
           </div>

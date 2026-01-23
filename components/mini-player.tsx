@@ -1,7 +1,7 @@
-﻿
-"use client"
+﻿"use client"
 
 import { useStore } from "@/lib/store"
+import { useAudioManager } from "@/hooks/use-audio-manager"
 import {
   Play,
   Pause,
@@ -17,291 +17,48 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { useState, useEffect, useCallback } from "react"
-import { getGlobalAudio } from "@/lib/audio-manager"
-
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 
-type StreamStatus = "loading" | "ready" | "error" | "buffering"
-
 export function MiniPlayer() {
+  // Initialize shared audio manager
+  useAudioManager()
+
   const {
     currentTrack,
     isPlaying,
     setIsPlaying,
     setIsMiniPlayer,
     setCurrentTrack,
-    currentStreamUrl,
-    setCurrentStreamUrl,
     currentQuality,
     audioElement,
-    setAudioElement,
     queue,
     setQueue,
+    progress,
+    streamStatus,
+    error,
+    volume,
+    setVolume,
+    isMuted,
+    setIsMuted,
   } = useStore()
 
-  const [progress, setProgress] = useState(0)
-  const [volume, setVolume] = useState(80)
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
-  const [streamStatus, setStreamStatus] = useState<StreamStatus>("loading")
-  const [error, setError] = useState<string | null>(null)
-  const [streamLogged, setStreamLogged] = useState(false)
-  const [adPlaying, setAdPlaying] = useState(false)
-  const [playedAds, setPlayedAds] = useState<number[]>([])
-  const [isMuted, setIsMuted] = useState(false)
   const [previousVolume, setPreviousVolume] = useState(80)
 
-  // Initialize audio element (shared with FullPlayer)
-  useEffect(() => {
-    if (!audioElement) {
-      const audio = getGlobalAudio()
-      audio.volume = volume / 100
-      audio.preload = "metadata"
-      setAudioElement(audio)
-    }
-
-    return () => {
-      // Don't destroy audio element, it's shared
-    }
-  }, [audioElement, setAudioElement, volume])
-
-  // Fetch stream URL with ownership verification
-  useEffect(() => {
-    if (!currentTrack) return
-
-    setStreamStatus("loading")
-    setError(null)
-    setStreamLogged(false)
-    setPlayedAds([])
-
-    const fetchStreamUrl = async () => {
-      try {
-        // TODO: Replace 'demo-user' with actual authenticated user ID
-        const userId = "demo-user"
-        const response = await fetch(`/api/stream/${currentTrack.id}?userId=${userId}`)
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            throw new Error("Access denied")
-          } else if (response.status === 429) {
-            throw new Error("Rate limit reached")
-          }
-          throw new Error("Stream failed")
-        }
-
-        const data = await response.json()
-
-        if (!data.streamUrl) {
-          throw new Error("No stream available")
-        }
-
-        setCurrentStreamUrl(data.streamUrl, data.quality)
-
-        if (audioElement && data.streamUrl) {
-          audioElement.src = data.streamUrl
-          audioElement.load()
-          setStreamStatus("ready")
-
-          if (isPlaying) {
-            const playPromise = audioElement.play()
-            if (playPromise !== undefined) {
-              playPromise.catch((err) => {
-                console.error("Playback failed:", err)
-                setError("Playback failed")
-                setStreamStatus("error")
-              })
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch stream URL:", err)
-        setError(err instanceof Error ? err.message : "Stream error")
-        setStreamStatus("error")
-      }
-    }
-
-    fetchStreamUrl()
-  }, [currentTrack, setCurrentStreamUrl, audioElement, isPlaying])
-
-  // Handle play/pause
-  useEffect(() => {
-    if (!audioElement || streamStatus !== "ready") return
-
-    if (isPlaying && !adPlaying) {
-      const playPromise = audioElement.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.error("Playback error:", err)
-          setIsPlaying(false)
-        })
-      }
-    } else if (!adPlaying) {
-      audioElement.pause()
-    }
-  }, [isPlaying, audioElement, streamStatus, adPlaying, setIsPlaying])
-
-  // Update volume
-  useEffect(() => {
-    if (audioElement) {
-      audioElement.volume = isMuted ? 0 : volume / 100
-    }
-  }, [volume, audioElement, isMuted])
-
-  // Audio event listeners
-  useEffect(() => {
-    if (!audioElement || !currentTrack) return
-
-    const updateProgress = () => {
-      if (audioElement.duration && !isNaN(audioElement.duration)) {
-        const prog = (audioElement.currentTime / audioElement.duration) * 100
-        setProgress(prog || 0)
-      }
-    }
-
-    const handleWaiting = () => setStreamStatus("buffering")
-    const handleCanPlay = () => setStreamStatus("ready")
-    const handleError = () => {
-      setError("Playback error")
-      setStreamStatus("error")
-      setIsPlaying(false)
-    }
-
-    const handleEnded = () => {
-      setIsPlaying(false)
-      setProgress(0)
-
-      // Auto-play next track if in queue
-      if (queue.length > 0) {
-        handleNext()
-      }
-    }
-
-    audioElement.addEventListener("timeupdate", updateProgress)
-    audioElement.addEventListener("waiting", handleWaiting)
-    audioElement.addEventListener("canplay", handleCanPlay)
-    audioElement.addEventListener("error", handleError)
-    audioElement.addEventListener("ended", handleEnded)
-
-    return () => {
-      audioElement.removeEventListener("timeupdate", updateProgress)
-      audioElement.removeEventListener("waiting", handleWaiting)
-      audioElement.removeEventListener("canplay", handleCanPlay)
-      audioElement.removeEventListener("error", handleError)
-      audioElement.removeEventListener("ended", handleEnded)
-    }
-  }, [audioElement, currentTrack, queue, setIsPlaying])
-
-  // Log stream for analytics after 30 seconds
-  useEffect(() => {
-    if (!isPlaying || !currentTrack || streamLogged || adPlaying) return
-
-    const timer = setTimeout(async () => {
-      try {
-        await fetch("/api/analytics/stream", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackId: currentTrack.id,
-            userId: "demo-user", // TODO: Replace with actual user ID
-            quality: currentQuality,
-            timestamp: Date.now(),
-            owned: currentTrack.owned || false,
-            duration: audioElement?.currentTime || 0,
-          }),
-        })
-        setStreamLogged(true)
-      } catch (err) {
-        console.error("Failed to log stream:", err)
-      }
-    }, 30000)
-
-    return () => clearTimeout(timer)
-  }, [isPlaying, currentTrack, streamLogged, currentQuality, audioElement, adPlaying])
-
-  // Ad insertion for free tier (non-owned tracks)
-  useEffect(() => {
-    if (!audioElement || !currentTrack || currentTrack.owned || adPlaying) return
-
-    const adSchedule = [
-      currentTrack.duration * 0.25,
-      currentTrack.duration * 0.5,
-      currentTrack.duration * 0.75,
-    ]
-
-    const checkForAd = () => {
-      const currentTime = audioElement.currentTime
-      const shouldPlayAd = adSchedule.find(
-        (adTime) => Math.abs(currentTime - adTime) < 0.5 && !playedAds.includes(adTime)
-      )
-
-      if (shouldPlayAd && isPlaying) {
-        playAd(shouldPlayAd)
-      }
-    }
-
-    audioElement.addEventListener("timeupdate", checkForAd)
-    return () => audioElement.removeEventListener("timeupdate", checkForAd)
-  }, [audioElement, currentTrack, playedAds, isPlaying, adPlaying])
-
-  const playAd = async (adTime: number) => {
-    if (!audioElement) return
-
-    const trackPosition = audioElement.currentTime
-    setAdPlaying(true)
-    setIsPlaying(false)
-    audioElement.pause()
-
-    try {
-      // Fetch ad URL from your ad server
-      const adResponse = await fetch("/api/ads/get-ad")
-      const adData = await adResponse.json()
-
-      if (adData.adUrl) {
-        const adAudio = new Audio(adData.adUrl)
-        adAudio.volume = volume / 100
-
-        await new Promise<void>((resolve) => {
-          adAudio.onended = () => resolve()
-          adAudio.play()
-        })
-
-        // Log ad impression for revenue tracking
-        await fetch("/api/ads/log-impression", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackId: currentTrack?.id,
-            adId: adData.adId,
-            userId: "demo-user",
-            timestamp: Date.now(),
-          }),
-        })
-      }
-    } catch (err) {
-      console.error("Ad playback failed:", err)
-    }
-
-    setPlayedAds([...playedAds, adTime])
-    audioElement.currentTime = trackPosition
-    setAdPlaying(false)
-    setIsPlaying(true)
-  }
-
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
     if (queue.length > 0) {
       const nextTrack = queue[0]
       setCurrentTrack(nextTrack)
       setQueue(queue.slice(1))
     }
-  }, [queue, setCurrentTrack, setQueue])
+  }
 
-  const handlePrevious = useCallback(() => {
+  const handlePrevious = () => {
     if (audioElement && audioElement.currentTime > 3) {
       audioElement.currentTime = 0
-    } else {
-      // TODO: Implement previous track from history
     }
-  }, [audioElement])
+  }
 
   const toggleMute = () => {
     if (isMuted) {
@@ -330,7 +87,6 @@ export function MiniPlayer() {
       <Slider
         value={[progress]}
         onValueChange={(value) => {
-          setProgress(value[0])
           if (audioElement && duration) {
             audioElement.currentTime = (value[0] / 100) * duration
           }
@@ -380,7 +136,7 @@ export function MiniPlayer() {
             <p className="font-semibold text-sm truncate">{currentTrack.title}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="truncate">{currentTrack.artist}</span>
-              <span className="text-primary">â€¢</span>
+              <span className="text-primary">•</span>
               <span className="shrink-0">
                 {streamStatus === "loading"
                   ? "Loading..."
@@ -391,7 +147,7 @@ export function MiniPlayer() {
 
               {currentTrack.edition && currentTrack.totalEditions && (
                 <>
-                  <span className="text-primary">â€¢</span>
+                  <span className="text-primary">•</span>
                   <span className="shrink-0">
                     #{currentTrack.edition}/{currentTrack.totalEditions}
                   </span>
@@ -400,7 +156,7 @@ export function MiniPlayer() {
 
               {!currentTrack.owned && (
                 <>
-                  <span className="text-primary">â€¢</span>
+                  <span className="text-primary">•</span>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1">
                     Free
                   </Badge>
@@ -498,7 +254,7 @@ export function MiniPlayer() {
             <Button
               variant="ghost"
               size="icon"
-              className="w-8 h-8"
+              className="w-8 h-8 relative"
               disabled={queue.length === 0}
               title={queue.length > 0 ? `${queue.length} tracks in queue` : "No tracks in queue"}
             >

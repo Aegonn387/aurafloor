@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import type React from "react"
 import { useState } from "react"
@@ -14,16 +14,29 @@ import { Progress } from "@/components/ui/progress"
 import { Upload, Music2, CheckCircle2, Info, Image as ImageIcon, Package, Brain, Radio, HelpCircle } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
-import { PiAuth } from "@/lib/pi-auth"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+// Helper function to convert File to base64 string
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      const base64 = reader.result?.toString().split(',')[1] || ''
+      resolve(base64)
+    }
+    reader.onerror = reject
+  })
+}
 
 export default function MintPage() {
   const router = useRouter()
   const user = useStore((state) => state.user)
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [mintedNFT, setMintedNFT] = useState<any>(null)
 
   // Form state
   const [audioFile, setAudioFile] = useState<File | null>(null)
@@ -41,6 +54,8 @@ export default function MintPage() {
   // New state for NFT type and monetization
   const [nftType, setNftType] = useState("audio")
   const [monetization, setMonetization] = useState<string[]>([])
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+  const [mintingError, setMintingError] = useState<string | null>(null)
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -61,10 +76,9 @@ export default function MintPage() {
 
     try {
       // Simulate AI content moderation check
-      // In production, this would call an AI service to analyze audio content
       await new Promise((resolve) => setTimeout(resolve, 3000))
 
-      // Mock moderation results - in production, use actual AI analysis
+      // Mock moderation results
       const isAppropriate = Math.random() > 0.1 // 90% approval rate for demo
 
       if (isAppropriate) {
@@ -87,31 +101,126 @@ export default function MintPage() {
   }
 
   const handleMint = async () => {
-    if (!audioFile || !title || !price) return
+    if (!audioFile || !title || !price || !user?.uid) {
+      setMintingError("Please fill all required fields and ensure you are logged in with Pi")
+      return
+    }
+
     setLoading(true)
+    setMintingError(null)
 
     try {
-      const mintingFee = Number.parseFloat(price) * 0.05
-      await PiAuth.createPayment({
-        amount: mintingFee,
-        memo: `Mint ${title} on Aurafloor (5% fee)`,
-        metadata: {
-          type: "mint",
-          nftType,
-          monetization,
+      console.log('[Mint] Starting minting process...')
+
+      // 1. Convert files to base64 for transmission
+      const audioData = await fileToBase64(audioFile)
+      const coverData = coverFile ? await fileToBase64(coverFile) : null
+
+      console.log('[Mint] Files converted, creating payment...')
+
+      // 2. Call approve-payment with all NFT data
+      const response = await fetch('/.netlify/functions/approve-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorWallet: user.uid,
           title,
-          price: Number.parseFloat(price),
-          resaleFee: monetization.includes("secondary") ? Number.parseInt(resaleFee) : 0,
+          description,
+          category,
+          price: parseFloat(price),
+          resaleFee: parseInt(resaleFee) * 100, // Convert percentage to integer (5% = 500)
           editionType,
-          totalEditions: editionType === "limited" ? Number.parseInt(totalEditions) : 0,
-        },
+          totalEditions: editionType === "limited" ? parseInt(totalEditions) : null,
+          monetization: monetization.length > 0 ? { types: monetization } : null,
+          audioData,
+          audioFilename: audioFile.name,
+          audioContentType: audioFile.type,
+          coverData,
+          coverFilename: coverFile?.name,
+          coverContentType: coverFile?.type,
+        }),
       })
 
-      console.log("[v0] NFT minted successfully")
-      setStep(4)
-      setTimeout(() => router.push("/marketplace"), 2000)
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || data.details || 'Payment creation failed')
+      }
+
+      const paymentId = data.paymentId
+      setPaymentId(paymentId)
+      console.log('[Mint] Payment created:', paymentId)
+
+      // 3. Use Pi SDK to complete payment
+      if (!window.Pi) {
+        throw new Error('Pi SDK not available. Please make sure you are using the Pi Browser.')
+      }
+
+      // Initiate Pi payment flow
+      const paymentData = {
+        amount: parseFloat(price),
+        memo: `Mint NFT: ${title}`,
+        metadata: {
+          type: 'nft_mint',
+          title,
+          creatorWallet: user.uid,
+          category,
+          resaleFee: parseInt(resaleFee),
+        },
+        uid: user.uid,
+      }
+
+      console.log('[Mint] Creating Pi payment with data:', paymentData)
+
+      // Use Pi SDK to create payment
+      const payment = await window.Pi.createPayment(paymentData, {
+        onReadyForServerApproval: async (paymentId: string) => {
+          console.log('[Mint] Pi payment ready for approval:', paymentId)
+          // Approve the payment on server
+          // No return needed - Pi SDK expects void
+        },
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          console.log('[Mint] Pi payment approved, completing...', paymentId, txid)
+
+          // 4. Call complete-payment with txid
+          const completeResponse = await fetch('/.netlify/functions/complete-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentId,
+              txid,
+            }),
+          })
+
+          const result = await completeResponse.json()
+
+          if (!result.success) {
+            throw new Error(result.error || result.details || 'Minting failed')
+          }
+
+          return result
+        },
+        onCancel: (paymentId: string) => {
+          console.log('[Mint] Payment cancelled:', paymentId)
+          throw new Error('Payment was cancelled by user')
+        },
+        onError: (error: any, paymentId?: string) => {
+          console.error('[Mint] Pi payment error:', error, paymentId)
+          throw new Error('Pi payment failed: ' + (error.message || 'Unknown error'))
+        }
+      })
+
+      console.log('[Mint] Pi payment completed successfully')
+
+      // 5. Handle successful minting
+      // The payment is successful if we reach here without errors
+      // The onReadyForServerCompletion callback already handled the success
+      // We just need to confirm the payment completed without errors
+
     } catch (error) {
-      console.error("Minting failed:", error)
+      console.error('[Mint] Error:', error)
+      setMintingError(error instanceof Error ? error.message : 'Minting failed. Please try again.')
+
     } finally {
       setLoading(false)
     }
@@ -140,6 +249,18 @@ export default function MintPage() {
     <div className="min-h-screen bg-background pb-24 sm:pb-20">
       <Header />
       <main className="container px-4 py-6 max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto">
+        {mintingError && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-red-500 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm mb-1">Minting Error</h4>
+                <p className="text-sm text-muted-foreground">{mintingError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">Mint Audio NFT</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Create your exclusive audio NFT in 3 simple steps</p>
@@ -675,7 +796,7 @@ export default function MintPage() {
                   onClick={handleMint}
                   disabled={loading || !price}
                 >
-                  {loading ? "Minting..." : `Mint NFT • ${(Number.parseFloat(price || "0") * 0.05).toFixed(2)}π`}
+                  {loading ? "Minting..." : "Mint NFT  π"}
                 </Button>
               </div>
             </CardContent>
@@ -690,14 +811,18 @@ export default function MintPage() {
               <p className="text-muted-foreground mb-2 text-sm sm:text-base">
                 Your audio NFT is now live on Aurafloor
               </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                You'll earn 90% on sales
-                {monetization.includes("secondary") && ` + ${resaleFee}% on resales`}
-                {(monetization.includes("free") || monetization.includes("streaming")) && " + 40% of ad revenue"}
-              </p>
-              <Button 
-                onClick={() => router.push("/marketplace")} 
-                className="h-11 sm:h-12 px-8 text-sm sm:text-base"
+              {mintedNFT && (
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg text-left">
+                  <h3 className="font-semibold mb-2">NFT Details:</h3>
+                  <p className="text-sm"><span className="font-medium">Title:</span> {mintedNFT.title}</p>
+                  <p className="text-sm"><span className="font-medium">Token ID:</span> {mintedNFT.tokenId}</p>
+                  <p className="text-sm"><span className="font-medium">Royalty:</span> {mintedNFT.royalty}%</p>
+                  <p className="text-sm truncate"><span className="font-medium">Audio URL:</span> {mintedNFT.audioUrl?.substring(0, 50)}...</p>
+                </div>
+              )}
+              <Button
+                onClick={() => router.push("/marketplace")}
+                className="h-11 sm:h-12 px-8 mt-6 text-sm sm:text-base"
               >
                 View Marketplace
               </Button>
@@ -709,3 +834,9 @@ export default function MintPage() {
     </div>
   )
 }
+
+
+
+
+
+
