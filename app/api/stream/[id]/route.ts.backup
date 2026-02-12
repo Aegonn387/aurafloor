@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL!);
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // FIXED: Await params in Next.js 15
+    const { id: nftId } = await context.params;
+    const { userId } = await request.json();
+
+    const nft = await sql`
+      SELECT * FROM nfts WHERE id = ${nftId}
+    `;
+
+    if (nft.length === 0) {
+      return NextResponse.json({ error: 'NFT not found' }, { status: 404 });
+    }
+
+    const ownership = await sql`
+      SELECT id FROM nft_ownership
+      WHERE nft_id = ${nftId} AND user_id = ${userId}
+      LIMIT 1
+    `;
+
+    const ownsNFT = ownership.length > 0;
+
+    const user = await sql`
+      SELECT subscription_tier FROM users WHERE id = ${userId}
+    `;
+
+    const subscriptionTier = user[0]?.subscription_tier || 'free';
+
+    let streamUrl: string;
+    let quality: string;
+    let requiresAd = false;
+
+    if (ownsNFT) {
+      streamUrl = nft[0].audio_hq_url;
+      quality = '320kbps';
+    } else if (subscriptionTier === 'premium') {
+      streamUrl = nft[0].audio_standard_url;
+      quality = '256kbps';
+    } else {
+      streamUrl = nft[0].audio_preview_url;
+      quality = '128kbps';
+      requiresAd = true;
+    }
+
+    return NextResponse.json({
+      success: true,
+      streamUrl,
+      quality,
+      requiresAd,
+      owned: ownsNFT,
+      metadata: {
+        title: nft[0].title,
+        duration: nft[0].duration,
+        coverUrl: nft[0].cover_image_url
+      }
+    });
+
+  } catch (error) {
+    console.error('[Stream URL] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to get stream URL' },
+      { status: 500 }
+    );
+  }
+}

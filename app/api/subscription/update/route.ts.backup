@@ -1,0 +1,41 @@
+export async function POST(request: NextRequest) {
+  const { userId, tier, paymentId } = await request.json();
+  
+  // Validate tier and get price
+  const prices = {
+    free: 0,
+    premium: 5 // 5Ï€ per month
+  };
+  
+  if (tier === 'premium') {
+    // Create Pi payment
+    const payment = await createPiPayment({
+      amount: prices.premium,
+      memo: 'Premium Subscription',
+      uid: userId
+    });
+    
+    // Store pending subscription
+    await redis.set(
+      pending_sub:,
+      JSON.stringify({ userId, tier, paymentId: payment.id }),
+      { ex: 3600 } // 1 hour expiry
+    );
+    
+    return NextResponse.json({ 
+      success: true, 
+      paymentId: payment.id 
+    });
+  }
+  
+  // For downgrades/cancellations
+  await sql
+    UPDATE users
+    SET 
+      subscription_tier = ,
+      subscription_expires_at = 
+    WHERE id = 
+  ;
+  
+  return NextResponse.json({ success: true });
+}

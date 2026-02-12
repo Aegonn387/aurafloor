@@ -1,0 +1,252 @@
+﻿import { NextRequest, NextResponse } from 'next/server';
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL!);
+
+interface CompletePaymentRequest {
+  paymentId: string;
+  metadataCid: string;
+  audioUrl?: string;
+}
+
+async function mintOnSoroban(params: {
+  minterAddress: string;
+  metadataCid: string;
+  audioR2Url: string;
+  royaltyBasisPoints: number;
+  contractId: string;
+}): Promise<{ tokenId: string; transactionHash: string }> {
+  try {
+    console.log('[Soroban Mint] Starting mint for:', params.minterAddress);
+
+    const StellarSdk = require('@stellar/stellar-sdk');
+    const server = new StellarSdk.rpc.Server('https://soroban-testnet.stellar.org');
+    const adminSecret = process.env.STELLAR_ADMIN_SECRET;
+
+    if (!adminSecret) {
+      throw new Error('STELLAR_ADMIN_SECRET not configured');
+    }
+
+    const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+    const contract = new StellarSdk.Contract(params.contractId);
+    const adminAccount = await server.getAccount(adminKeypair.publicKey());
+
+    // For Stellar SDK 14.4.3 - Build royalty info using the correct API
+    const royaltyInfo = {
+      recipient: params.minterAddress,
+      basis_points: params.royaltyBasisPoints,
+      additional_payees: [],
+      is_fixed: true
+    };
+
+    console.log('[Soroban Mint] Built royalty info ScVal');
+
+    const transaction = new StellarSdk.TransactionBuilder(adminAccount, {
+      fee: '1000000', // Increased fee for better success rate
+      networkPassphrase: StellarSdk.Networks.TESTNET,
+    })
+      .addOperation(
+        contract.call(
+          'mint',
+          StellarSdk.Address.fromString(params.minterAddress).toScVal(),
+          StellarSdk.ScVal.scvString(params.metadataCid), // Correct method for v14.4.3
+          StellarSdk.ScVal.scvString(params.audioR2Url), // Correct method for v14.4.3
+          // For v14.4.3, use xdr.ScVal for complex structures
+          StellarSdk.xdr.ScVal.scvMap([
+            new StellarSdk.xdr.ScMapEntry({
+              key: StellarSdk.xdr.ScVal.scvSymbol("recipient"),
+              val: new StellarSdk.Address(params.minterAddress).toScVal(),
+            }),
+            new StellarSdk.xdr.ScMapEntry({
+              key: StellarSdk.xdr.ScVal.scvSymbol("basis_points"),
+              val: StellarSdk.xdr.ScVal.scvU32(params.royaltyBasisPoints),
+            }),
+            new StellarSdk.xdr.ScMapEntry({
+              key: StellarSdk.xdr.ScVal.scvSymbol("additional_payees"),
+              val: StellarSdk.xdr.ScVal.scvVec([]),
+            }),
+            new StellarSdk.xdr.ScMapEntry({
+              key: StellarSdk.xdr.ScVal.scvSymbol("is_fixed"),
+              val: StellarSdk.xdr.ScVal.scvBool(true),
+            }),
+          ])
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    transaction.sign(adminKeypair);
+
+    const simulateResponse = await server.simulateTransaction(transaction);
+    if (simulateResponse.error) {
+      console.error('[Soroban Mint] Simulation error details:', simulateResponse.error);
+      throw new Error('Simulation failed: ' + JSON.stringify(simulateResponse.error));
+    }
+
+    const preparedTransaction = StellarSdk.SorobanRpc.assembleTransaction(
+      transaction,
+      simulateResponse
+    ).build();
+
+    preparedTransaction.sign(adminKeypair);
+    const sendResponse = await server.sendTransaction(preparedTransaction);
+
+    if (sendResponse.status === 'ERROR') {
+      throw new Error('Send failed: ' + sendResponse.errorResult);
+    }
+
+    const txHash = sendResponse.hash;
+    console.log('[Soroban Mint] Transaction sent:', txHash);
+
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    while (attempts < maxAttempts) {
+      try {
+        const txResponse = await server.getTransaction(txHash);
+        if (txResponse.status === 'SUCCESS' && txResponse.returnValue) {
+          const tokenIdVal = StellarSdk.scValToNative(txResponse.returnValue);
+          console.log('[Soroban Mint] Minted! Token ID:', tokenIdVal);
+          return {
+            tokenId: tokenIdVal.toString(),
+            transactionHash: txHash
+          };
+        }
+        if (txResponse.status === 'FAILED') {
+          throw new Error('Transaction failed: ' + txResponse.resultXdr);
+        }
+      } catch (error) {
+        // Continue polling
+      }
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    throw new Error('Could not retrieve token ID after mint');
+  } catch (error) {
+    console.error('[Soroban Mint] Error:', error);
+    throw error;
+  }
+}
+
+export async function POST(req: NextRequest) {
+  if (req.method !== 'POST') {
+    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+  }
+
+  try {
+    const body = JSON.parse(await req.text() || '{}') as CompletePaymentRequest;
+    const { paymentId, metadataCid, audioUrl } = body;
+
+    if (!paymentId || !metadataCid) {
+      return NextResponse.json({
+        error: 'Payment ID and Metadata CID are required'
+      }, { status: 400 });
+    }
+
+    console.log('[Complete Payment] Processing payment:', paymentId);
+    console.log('[Complete Payment] Received Metadata CID:', metadataCid);
+    console.log('[Complete Payment] Received Audio URL:', audioUrl || 'not provided');
+
+    const nftData = await sql`SELECT * FROM pending_nft_mints WHERE payment_id = ${paymentId} LIMIT 1`;
+    if (nftData.length === 0) {
+      throw new Error('NFT data not found for this payment ID');
+    }
+
+    const nft = nftData[0];
+    console.log('[Complete Payment] Found NFT data:', nft.title);
+
+    const userData = await sql`
+      SELECT stellar_public_key FROM u WHERE id = ${nft.creator_wallet} LIMIT 1
+    `;
+    
+    if (userData.length === 0 || !userData[0].stellar_public_key) {
+      throw new Error('User Stellar address not found. User may need to connect their Stellar wallet.');
+    }
+    
+    const minterStellarAddress = userData[0].stellar_public_key;
+    console.log('[Complete Payment] Found Stellar address for minter:', minterStellarAddress);
+
+    const contractId = process.env.STELLAR_NFT_CONTRACT_ID;
+    if (!contractId) {
+      throw new Error('STELLAR_NFT_CONTRACT_ID not configured');
+    }
+
+    const finalAudioUrl = audioUrl || `/api/stream/${paymentId}`;
+
+    console.log('[Complete Payment] Using audio URL:', finalAudioUrl);
+    console.log('[Complete Payment] Using contract:', contractId);
+
+    const sorobanResult = await mintOnSoroban({
+      minterAddress: minterStellarAddress,
+      metadataCid: metadataCid,
+      audioR2Url: finalAudioUrl,
+      royaltyBasisPoints: nft.resale_fee,
+      contractId: contractId
+    });
+
+    console.log('[Complete Payment] Successfully minted token:', sorobanResult.tokenId);
+
+    const nftIdResult = await sql`
+      INSERT INTO nfts (
+        blockchain_nft_id,
+        creator_id,
+        current_owner_id,
+        title,
+        description,
+        genre,
+        audio_preview_url,
+        audio_standard_url,
+        audio_hq_url,
+        audio_ipfs_hash,
+        cover_image_url,
+        cover_image_ipfs_hash,
+        metadata,
+        price,
+        resale_royalty_percent,
+        status,
+        blockchain_synced_at
+      ) VALUES (
+        ${sorobanResult.tokenId},
+        (SELECT id FROM u WHERE id = ${nft.creator_wallet}),
+        (SELECT id FROM u WHERE id = ${nft.creator_wallet}),
+        ${nft.title},
+        ${nft.description || ''},
+        ${nft.category || ''},
+        ${finalAudioUrl},
+        ${finalAudioUrl},
+        ${finalAudioUrl},
+        ${metadataCid},
+        ${nft.cover_gateway_url || null},
+        ${nft.cover_ipfs_cid || null},
+        ${nft.metadata_json || JSON.stringify({ cid: metadataCid })},
+        ${nft.price},
+        ${nft.resale_fee / 100},
+        'active',
+        NOW()
+      ) RETURNING id
+    `;
+
+    await sql`DELETE FROM pending_nft_mints WHERE payment_id = ${paymentId}`;
+
+    return NextResponse.json({
+      success: true,
+      nft: {
+        tokenId: sorobanResult.tokenId,
+        nftId: nftIdResult[0].id,
+        title: nft.title,
+        audioUrl: finalAudioUrl,
+        royalty: nft.resale_fee / 100,
+        transactionHash: sorobanResult.transactionHash,
+        metadataCid: metadataCid
+      }
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error('[Complete Payment] Error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Minting on Stellar failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}

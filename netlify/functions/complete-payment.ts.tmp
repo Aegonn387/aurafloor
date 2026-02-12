@@ -1,0 +1,501 @@
+﻿import { Handler } from '@netlify/functions';
+import { neon } from '@neondatabase/serverless';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import pinataSDK from '@pinata/sdk';
+import { Keypair, TransactionBuilder, Networks, Asset, Operation, Server } from '@stellar/stellar-sdk';
+
+// Initialize Neon database connection
+const sql = neon(process.env.DATABASE_URL!);
+
+// Initialize Cloudflare R2 client
+const R2 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+const R2_BUCKET = process.env.R2_BUCKET_NAME!;
+
+// Initialize Pinata
+const pinata = new pinataSDK(
+  process.env.PINATA_API_KEY!,
+  process.env.PINATA_SECRET_API_KEY!
+);
+
+interface CompletePaymentRequest {
+  paymentId: string;
+  txid: string;
+}
+
+interface PendingNFTData {
+  payment_id: string;
+  creator_wallet: string;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  resale_fee: number;
+  edition_type: string;
+  total_editions: number;
+  monetization: any;
+  audio_data: Buffer;
+  audio_filename: string;
+  audio_content_type: string;
+  cover_data: Buffer | null;
+  cover_filename: string | null;
+  cover_content_type: string | null;
+  created_at: Date;
+  expires_at: Date;
+}
+
+async function mintOnSoroban(params: {
+  creatorAddress: string;
+  tokenUri: string;
+  royaltyBps: number;
+  contractId: string;
+}) {
+  try {
+    console.log('[Soroban Mint] Starting REAL mint process for creator:', params.creatorAddress);
+    
+    const StellarSdk = require('@stellar/stellar-sdk');
+    
+    const server = new StellarSdk.rpc.Server('https://soroban-testnet.stellar.org');
+    const adminSecret = process.env.STELLAR_ADMIN_SECRET;
+    
+    if (!adminSecret) {
+      throw new Error('STELLAR_ADMIN_SECRET not configured');
+    }
+    
+    const adminKeypair = StellarSdk.Keypair.fromSecret(adminSecret);
+    const contract = new StellarSdk.Contract(params.contractId);
+    const adminAccount = await server.getAccount(adminKeypair.publicKey());
+
+    const transaction = new StellarSdk.TransactionBuilder(adminAccount, {
+      fee: '100000',
+      networkPassphrase: StellarSdk.Networks.TESTNET,
+    })
+      .addOperation(
+        contract.call(
+          'mint',
+          StellarSdk.Address.fromString(params.creatorAddress).toScVal(),
+          StellarSdk.nativeToScVal(params.tokenUri, { type: 'string' }),
+          StellarSdk.nativeToScVal(params.royaltyBps, { type: 'u32' })
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    transaction.sign(adminKeypair);
+
+    const simulateResponse = await server.simulateTransaction(transaction);
+    if (simulateResponse.error) {
+      throw new Error('Simulation failed: ' + JSON.stringify(simulateResponse.error));
+    }
+
+    const preparedTransaction = StellarSdk.SorobanRpc.assembleTransaction(
+      transaction,
+      simulateResponse
+    ).build();
+
+    preparedTransaction.sign(adminKeypair);
+    const sendResponse = await server.sendTransaction(preparedTransaction);
+
+    if (sendResponse.status === 'ERROR') {
+      throw new Error('Send failed: ' + sendResponse.errorResult);
+    }
+
+    const txHash = sendResponse.hash;
+    console.log('[Soroban Mint] Transaction sent:', txHash);
+
+    // Wait for token ID
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const txResponse = await server.getTransaction(txHash);
+        
+        if (txResponse.status === 'SUCCESS' && txResponse.returnValue) {
+          const tokenIdVal = StellarSdk.scValToNative(txResponse.returnValue);
+          const tokenId = tokenIdVal.toString();
+          console.log('[Soroban Mint] NFT minted! Token ID:', tokenId);
+          
+          return {
+            success: true,
+            tokenId: tokenId,
+            transactionHash: txHash
+          };
+        }
+        
+        if (txResponse.status === 'FAILED') {
+          throw new Error('Transaction failed: ' + txResponse.resultXdr);
+        }
+      } catch (error) {
+        // Transaction not found yet, continue waiting
+      }
+      
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    throw new Error('Could not retrieve token ID after mint');
+
+  } catch (error) {
+    console.error('[Soroban Mint] Error:', error);
+    throw error;
+  }
+}`;
+    console.log('[Soroban Mint] Generated token ID:', mockTokenId);
+    
+    return {
+      success: true,
+      tokenId: mockTokenId,
+      transactionHash: `mock-soroban-tx-${Date.now()}`
+    };
+  } catch (error) {
+    console.error('[Soroban Mint] Error:', error);
+    throw error;
+  }
+}
+
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}') as CompletePaymentRequest;
+    const { paymentId, txid } = body;
+
+    if (!paymentId || !txid) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: JSON.stringify({
+          error: 'Payment ID and txid are required'
+        })
+      };
+    }
+
+    console.log('[Complete Payment] Processing payment:', paymentId);
+
+    const piApiKey = process.env.PI_API_KEY;
+    if (!piApiKey) {
+      throw new Error('PI_API_KEY environment variable is not set');
+    }
+
+    console.log('[Complete Payment] Verifying Pi payment...');
+    
+    const piVerifyUrl = `https://api.minepi.com/v2/payments/${paymentId}/complete`;
+    const piVerifyResponse = await fetch(piVerifyUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${piApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ txid })
+    });
+
+    if (!piVerifyResponse.ok) {
+      const errorText = await piVerifyResponse.text();
+      console.error('[Complete Payment] Pi verification failed:', errorText);
+      throw new Error(`Pi payment verification failed: ${errorText}`);
+    }
+
+    console.log('[Complete Payment] Pi payment verified successfully');
+
+    console.log('[Complete Payment] Fetching payment details for:', paymentId);
+    
+    const paymentDetailsResponse = await fetch(`https://api.minepi.com/v2/payments/${paymentId}`, {
+      headers: {
+        'Authorization': `Key ${piApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!paymentDetailsResponse.ok) {
+      const errorText = await paymentDetailsResponse.text();
+      throw new Error('Failed to fetch payment details: ' + errorText);
+    }
+
+    const paymentDetails = await paymentDetailsResponse.json();
+    console.log('[Complete Payment] Payment details:', {
+      amount: paymentDetails.amount,
+      from_address: paymentDetails.from_address,
+      status: paymentDetails.status
+    });
+
+    const appSecretSeed = process.env.PI_APP_SECRET_SEED;
+    if (appSecretSeed) {
+      try {
+        const appKeypair = Keypair.fromSecret(appSecretSeed);
+        const server = new Server('https://api.testnet.minepi.com');
+
+        const account = await server.loadAccount(appKeypair.publicKey());
+
+        const transaction = new TransactionBuilder(account, {
+          fee: "10000",
+          networkPassphrase: Networks.TESTNET
+        })
+        .addOperation(Operation.payment({
+          destination: paymentDetails.from_address,
+          asset: Asset.native(),
+          amount: paymentDetails.amount.toString()
+        }))
+        .setTimeout(180)
+        .build();
+
+        transaction.sign(appKeypair);
+        console.log('[Complete Payment] Refund transaction signed');
+
+        const submitResponse = await fetch('https://api.testnet.minepi.com/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tx: transaction.toXDR()
+          })
+        });
+
+        if (submitResponse.ok) {
+          const transactionResult = await submitResponse.json();
+          console.log('[Complete Payment] Refund transaction submitted:', transactionResult.hash);
+        } else {
+          const errorText = await submitResponse.text();
+          console.warn('[Complete Payment] Failed to submit refund transaction:', errorText);
+        }
+      } catch (error) {
+        console.warn('[Complete Payment] Error processing refund transaction:', error);
+      }
+    }
+
+    const nftData = await sql`
+      SELECT * FROM pending_nft_mints
+      WHERE payment_id = ${paymentId}
+      LIMIT 1
+    `;
+
+    if (nftData.length === 0) {
+      throw new Error('NFT data not found for this payment');
+    }
+
+    const nft = nftData[0] as PendingNFTData;
+    console.log('[Complete Payment] Retrieved NFT data:', nft.title);
+
+    // Audio will be uploaded after minting with token ID
+    // Upload audio AFTER minting to use proper token ID structure
+    const tokenId = sorobanResult.tokenId;
+    
+    await R2.send(new PutObjectCommand({
+      Bucket: R2_BUCKET,
+      Body: nft.audio_data,
+      ContentType: nft.audio_content_type,
+    }));
+    // Audio URL will be set after upload
+
+    console.log('[Complete Payment] Audio uploaded to R2:', audioUrl);
+
+    let coverIpfsHash = '';
+    if (nft.cover_data && nft.cover_filename) {
+      try {
+        const coverResult = await pinata.pinFileToIPFS(nft.cover_data, {
+          pinataMetadata: {
+            name: nft.cover_filename || `cover-${paymentId}`
+          },
+        });
+        coverIpfsHash = coverResult.IpfsHash;
+        console.log('[Complete Payment] Cover uploaded to IPFS:', coverIpfsHash);
+      } catch (error) {
+        console.warn('[Complete Payment] Failed to upload cover to IPFS:', error);
+      }
+    }
+
+    const metadata = {
+      name: nft.title,
+      description: nft.description,
+      image: coverIpfsHash ? `ipfs://${coverIpfsHash}` : '',
+      animation_url: audioUrl,
+      external_url: `https://aurafloor.xyz/track/${paymentId}`,
+      attributes: [
+        { trait_type: 'Category', value: nft.category },
+        { trait_type: 'Edition Type', value: nft.edition_type || 'Single' },
+        { trait_type: 'Royalty', value: `${nft.resale_fee / 100}%` },
+        ...(nft.total_editions ? [{ trait_type: 'Total Editions', value: nft.total_editions }] : []),
+        ...(nft.monetization ? [{ trait_type: 'Monetization', value: JSON.stringify(nft.monetization) }] : []),
+      ],
+      properties: {
+        creator: nft.creator_wallet,
+        price: nft.price,
+        created_at: nft.created_at.toISOString(),
+      }
+    };
+
+    const metadataResult = await pinata.pinJSONToIPFS(metadata, {
+      pinataMetadata: { name: `${nft.title} - Metadata` },
+    });
+    const tokenUri = `ipfs://${metadataResult.IpfsHash}`;
+
+    console.log('[Complete Payment] Metadata uploaded to IPFS:', tokenUri);
+
+    const sorobanResult = await mintOnSoroban({
+      creatorAddress: nft.creator_wallet,
+      tokenUri: tokenUri,
+      royaltyBps: nft.resale_fee,
+      contractId: process.env.STELLAR_NFT_CONTRACT_ID || 'mock-contract-id'
+    });
+
+    const nftIdResult = await sql`
+      INSERT INTO nfts (
+        blockchain_nft_id,
+        creator_id,
+        current_owner_id,
+        title,
+        description,
+        genre,
+        audio_preview_url,
+        audio_standard_url,
+        audio_hq_url,
+        audio_ipfs_hash,
+        cover_image_url,
+        cover_image_ipfs_hash,
+        metadata,
+        edition_type,
+        total_editions,
+        price,
+        resale_royalty_percent,
+        status,
+        blockchain_synced_at
+      ) VALUES (
+        ${sorobanResult.tokenId},
+        (SELECT id FROM users WHERE pi_address = ${nft.creator_wallet}),
+        (SELECT id FROM users WHERE pi_address = ${nft.creator_wallet}),
+        ${nft.title},
+        ${nft.description},
+        ${nft.category},
+        ${audioUrl},
+        ${audioUrl},
+        ${audioUrl},
+        ${metadataResult.IpfsHash},
+        ${coverIpfsHash ? `ipfs://${coverIpfsHash}` : null},
+        ${coverIpfsHash || null},
+        ${JSON.stringify(metadata)},
+        ${nft.edition_type},
+        ${nft.total_editions},
+        ${nft.price},
+        ${nft.resale_fee / 100},
+        'active',
+        NOW()
+      )
+      RETURNING id
+    `;
+    
+    const nftId = nftIdResult[0].id;
+
+    await sql`
+      INSERT INTO transactions (
+        type,
+        from_user_id,
+        to_user_id,
+        nft_id,
+        amount,
+        platform_fee,
+        status,
+        pi_payment_id,
+        blockchain_tx_hash,
+        completed_at
+      ) VALUES (
+        'mint_fee',
+        (SELECT id FROM users WHERE pi_address = ${nft.creator_wallet}),
+        NULL,
+        ${nftId},
+        ${nft.price},
+        ${0},
+        'completed',
+        ${paymentId},
+        ${sorobanResult.transactionHash},
+        NOW()
+      )
+    `;
+
+    const creatorUserIdResult = await sql`
+      SELECT id FROM users WHERE pi_address = ${nft.creator_wallet}
+    `;
+    
+    const creatorUserId = creatorUserIdResult[0]?.id;
+    
+    if (creatorUserId) {
+      await sql`
+        UPDATE user_wallets
+        SET
+          available_balance = available_balance - ${nft.price},
+          lifetime_spent = lifetime_spent + ${nft.price},
+          updated_at = NOW()
+        WHERE user_id = ${creatorUserId}
+      `;
+    }
+
+    await sql`
+      INSERT INTO nft_ownership (nft_id, user_id, purchased_at, purchase_price)
+      VALUES (${nftId}, ${creatorUserId}, NOW(), ${nft.price})
+    `;
+
+    await sql`
+      DELETE FROM pending_nft_mints
+      WHERE payment_id = ${paymentId}
+    `;
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({
+        success: true,
+        paymentId,
+        transactionHash: sorobanResult.transactionHash,
+        nft: {
+          tokenId: sorobanResult.tokenId,
+          nftId: nftId,
+          tokenUri,
+          audioUrl,
+          coverUrl: coverIpfsHash ? `ipfs://${coverIpfsHash}` : null,
+          title: nft.title,
+          description: nft.description,
+          royalty: nft.resale_fee / 100,
+          price: nft.price,
+          creatorWallet: nft.creator_wallet,
+        },
+        message: 'Payment completed and NFT minted successfully!'
+      })
+    };
+
+  } catch (error) {
+    console.error('[Complete Payment] Error:', error);
+
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({
+        error: 'NFT minting failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        success: false
+      })
+    };
+  }
+};
