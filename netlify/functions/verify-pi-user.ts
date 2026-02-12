@@ -44,7 +44,7 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // IMPORTANT: Validate the access token with Pi's official Testnet API
+    // CORRECT Pi Network API endpoint (mainnet - there is no separate testnet for /me endpoint)
     const piApiUrl = 'https://api.minepi.com/v2/me'
 
     console.log('[Pi Verification] Calling Pi API:', piApiUrl)
@@ -70,13 +70,13 @@ export const handler: Handler = async (event) => {
         },
         body: JSON.stringify({
           error: 'Invalid Pi access token',
-          details: `Pi API returned ${piResponse.status}`
+          details: `Pi API returned ${piResponse.status}: ${errorText}`
         })
       }
     }
 
     const piUserData = await piResponse.json()
-    console.log('[Pi Verification] Pi user data received:', piUserData.uid)
+    console.log('[Pi Verification] Pi user data received:', piUserData)
 
     // Return the verified user data to your frontend
     return {
