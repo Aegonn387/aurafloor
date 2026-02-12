@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils"
 
 const ResizablePanelGroup = React.forwardRef<
-  React.ElementRef<typeof PanelGroup>,
+  any,
   React.ComponentPropsWithoutRef<typeof PanelGroup>
 >(({ className, ...props }, ref) => (
   <PanelGroup
