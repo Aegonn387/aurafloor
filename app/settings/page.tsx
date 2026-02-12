@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -501,16 +501,21 @@ export default function SettingsPage() {
                   <h4 className="font-medium text-sm sm:text-base">Help Resources</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
-                      { title: "FAQs", description: "Frequently asked questions" },
-                      { title: "User Guide", description: "How to use Aurafloor" },
-                      { title: "Community", description: "Join our community forum" },
-                      { title: "Terms of Service", description: "Platform rules and policies" },
+                      { title: "FAQs", href: "#", description: "Frequently asked questions" },
+                      { title: "User Guide", href: "#", description: "How to use Aurafloor" },
+                      { title: "Community", href: "/community", description: "Join our community forum" },
+                      { title: "Terms of Service", href: "/terms", description: "Platform rules and policies" },
+                      { title: "Privacy Policy", href: "/privacy", description: "How we handle your data" },
+                      { title: "Copyright Policy", href: "/copyright", description: "IP rights and takedowns" },
+                      { title: "Fee Structure", href: "/fees", description: "Transparent fee breakdown" }
                     ].map((resource, index) => (
-                      <Button key={index} variant="outline" className="justify-start h-auto py-3 text-left">
-                        <div>
-                          <p className="font-medium text-sm">{resource.title}</p>
-                          <p className="text-xs text-muted-foreground">{resource.description}</p>
-                        </div>
+                      <Button key={index} variant="outline" className="justify-start h-auto py-3 text-left" asChild>
+                        <Link href={resource.href}>
+                          <div>
+                            <p className="font-medium text-sm">{resource.title}</p>
+                            <p className="text-xs text-muted-foreground">{resource.description}</p>
+                          </div>
+                        </Link>
                       </Button>
                     ))}
                   </div>

@@ -45,7 +45,7 @@ export const handler: Handler = async (event) => {
     }
 
     // IMPORTANT: Validate the access token with Pi's official Testnet API
-    const piApiUrl = 'https://api.testnet.minepi.com/v2/me'
+    const piApiUrl = 'https://api.minepi.com/v2/me'
 
     console.log('[Pi Verification] Calling Pi API:', piApiUrl)
 
