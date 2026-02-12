@@ -1,4 +1,4 @@
-﻿import { Handler } from '@netlify/functions'
+import { Handler } from '@netlify/functions'
 
 export const handler: Handler = async (event) => {
   console.log('[Pi Verification] Function called')
@@ -44,12 +44,11 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // IMPORTANT: Validate the access token with Pi's official API
-    // This is the server-side verification that MUST happen
-    const piApiUrl = 'https://api.minepi.com/v2/me'
-    
+    // IMPORTANT: Validate the access token with Pi's official Testnet API
+    const piApiUrl = 'https://api.testnet.minepi.com/v2/me'
+
     console.log('[Pi Verification] Calling Pi API:', piApiUrl)
-    
+
     const piResponse = await fetch(piApiUrl, {
       method: 'GET',
       headers: {
@@ -69,7 +68,7 @@ export const handler: Handler = async (event) => {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           error: 'Invalid Pi access token',
           details: `Pi API returned ${piResponse.status}`
         })
@@ -104,7 +103,7 @@ export const handler: Handler = async (event) => {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       })
