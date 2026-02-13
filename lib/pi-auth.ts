@@ -33,6 +33,7 @@ export interface PiPaymentCallbacks {
 export interface PiInitOptions {
   version: string;
   sandbox?: boolean;
+  appId?: string;
 }
 
 // Add PiSDK interface to global Window
@@ -41,7 +42,7 @@ declare global {
     Pi: {
       init: (options: PiInitOptions) => void;
       authenticate: (
-        scopes: string[], 
+        scopes: string[],
         onIncompletePaymentFound: (payment: any) => void
       ) => Promise<PiAuthResult>;
       createPayment: (
@@ -66,13 +67,25 @@ export const PiAuth = {
     }
   },
 
-  // UPDATED: Initialize the Pi SDK first
+  // UPDATED: Initialize the Pi SDK with App ID
   initialize: (sandboxMode: boolean = process.env.NODE_ENV === "development"): boolean => {
     if (typeof window === "undefined" || !window.Pi) return false;
-    
+
     try {
-      window.Pi.init({ version: "2.0", sandbox: sandboxMode });
-      console.log("[Pi SDK] Initialized with version 2.0, sandbox:", sandboxMode);
+      const appId = process.env.NEXT_PUBLIC_PI_APP_ID;
+      
+      if (!appId) {
+        console.error("[Pi SDK] App ID not found in environment variables");
+        return false;
+      }
+
+      window.Pi.init({ 
+        version: "2.0", 
+        sandbox: sandboxMode,
+        appId: appId
+      });
+      
+      console.log("[Pi SDK] Initialized with version 2.0, sandbox:", sandboxMode, "appId:", appId);
       return true;
     } catch (error) {
       console.error("[Pi SDK] Initialization error:", error);
@@ -93,7 +106,7 @@ export const PiAuth = {
     try {
       const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("Pi authentication successful:", auth)
-      
+
       return {
         uid: auth.user.uid,
         username: auth.user.username,
@@ -121,7 +134,7 @@ export const PiAuth = {
     const callbacks = {
       onReadyForServerApproval: async (paymentId: string) => {
         console.log("Payment ready for approval:", paymentId)
-        
+
         try {
           const response = await fetch("/api/payments/approve", {
             method: "POST",
@@ -132,17 +145,17 @@ export const PiAuth = {
           if (!response.ok) {
             throw new Error("Failed to approve payment")
           }
-          
+
           console.log("Payment approved:", paymentId)
         } catch (error) {
           console.error("Payment approval failed:", error)
           throw error
         }
       },
-      
+
       onReadyForServerCompletion: async (paymentId: string, txid: string) => {
         console.log("Payment ready for completion:", paymentId, txid)
-        
+
         try {
           const response = await fetch("/.netlify/functions/complete-payment", {
             method: "POST",
@@ -153,18 +166,18 @@ export const PiAuth = {
           if (!response.ok) {
             throw new Error("Failed to complete payment")
           }
-          
+
           console.log("Payment completed:", paymentId)
         } catch (error) {
           console.error("Payment completion failed:", error)
           throw error
         }
       },
-      
+
       onCancel: (paymentId: string) => {
         console.log("Payment cancelled:", paymentId)
       },
-      
+
       onError: (error: Error, payment?: any) => {
         console.error("Payment error:", error, payment)
       },
