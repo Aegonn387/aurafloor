@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Music2, Twitter, MessageCircle, Github } from "lucide-react"
+import { Music2 } from "lucide-react"
 
 export function Footer() {
   return (
@@ -19,19 +19,9 @@ export function Footer() {
             <p className="text-xs text-muted-foreground mb-2 max-w-xs">
               Pi-powered audio NFT marketplace for musicians and collectors.
             </p>
-            <div className="flex gap-2">
-              <Link href="https://twitter.com" className="h-7 w-7 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors" target="_blank" rel="noopener noreferrer">
-                <Twitter className="h-3 w-3" />
-              </Link>
-              <Link href="https://discord.com" className="h-7 w-7 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors" target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-3 w-3" />
-              </Link>
-              <Link href="https://github.com" className="h-7 w-7 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors" target="_blank" rel="noopener noreferrer">
-                <Github className="h-3 w-3" />
-              </Link>
-            </div>
+            {/* Social media links removed */}
           </div>
-          
+
           {/* Marketplace */}
           <div>
             <h3 className="font-semibold mb-2 text-sm">Marketplace</h3>
@@ -42,7 +32,7 @@ export function Footer() {
               <li><Link href="/marketplace?category=podcast" className="hover:text-foreground transition-colors">Podcasts</Link></li>
             </ul>
           </div>
-          
+
           {/* Creators */}
           <div>
             <h3 className="font-semibold mb-2 text-sm">Creators</h3>
@@ -53,18 +43,18 @@ export function Footer() {
               <li><Link href="/creator-tools" className="hover:text-foreground transition-colors">Creator Tools</Link></li>
             </ul>
           </div>
-          
+
           {/* Community */}
           <div>
             <h3 className="font-semibold mb-2 text-sm">Community</h3>
             <ul className="space-y-1.5 text-sm text-muted-foreground">
               <li><Link href="/community" className="hover:text-foreground transition-colors">Community Hub</Link></li>
               <li><Link href="/subscribe" className="hover:text-foreground transition-colors">Subscriptions</Link></li>
-              <li><Link href="https://pi.network" className="hover:text-foreground transition-colors" target="_blank">Pi Network</Link></li>
+              {/* External Pi Network link removed */}
               <li><Link href="/help" className="hover:text-foreground transition-colors">Help Center</Link></li>
             </ul>
           </div>
-          
+
           {/* Legal */}
           <div>
             <h3 className="font-semibold mb-2 text-sm">Legal</h3>
@@ -76,8 +66,8 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        
-        {/* Copyright & Powered by - moved directly to bottom */}
+
+        {/* Copyright & Powered by */}
         <div className="border-t pt-3 pb-3 flex flex-col sm:flex-row justify-between items-center gap-2">
           <p className="text-xs text-muted-foreground text-center sm:text-left">
             Copyright {new Date().getFullYear()} Aurafloor. All rights reserved.
