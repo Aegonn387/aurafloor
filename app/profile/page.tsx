@@ -1,5 +1,6 @@
 "use client"
 
+import React from 'react'
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,8 @@ import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, 
 import { useStore } from "@/lib/store"
 import { NFTCard } from "@/components/nft-card"
 import { InlineWallet } from "@/components/inline-wallet"
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { LoadMore } from "@/components/load-more"
 import Link from "next/link"
 import { useState, useRef, useEffect } from "react"
 
@@ -18,9 +21,14 @@ export default function ProfilePage() {
   const user = useStore((state) => state.user)
   const setUser = useStore((state) => state.setUser)
   const [profileImage, setProfileImage] = useState<string | null>(null)
-  const [userNFTs, setUserNFTs] = useState<any[]>([])
+  const [allUserNFTs, setAllUserNFTs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { items: displayedNFTs, loading: loadingMore, hasMore, loadMoreRef } = useInfiniteScroll({
+    initialItems: allUserNFTs,
+    itemsPerPage: 8
+  })
 
   // Fetch user's NFTs from marketplace
   useEffect(() => {
@@ -28,9 +36,8 @@ export default function ProfilePage() {
       try {
         const response = await fetch('/api/stellar/get-listing/?getAll=true')
         const data = await response.json()
-
         if (data.success) {
-          setUserNFTs(data.listings || [])
+          setAllUserNFTs(data.listings || [])
         }
       } catch (error) {
         console.error('[Profile] Error fetching NFTs:', error)
@@ -38,7 +45,6 @@ export default function ProfilePage() {
         setLoading(false)
       }
     }
-
     fetchUserNFTs()
   }, [])
 
@@ -136,36 +142,40 @@ export default function ProfilePage() {
                     <p className="text-sm text-muted-foreground">Loading your collection...</p>
                   </CardContent>
                 </Card>
-              ) : userNFTs.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {userNFTs.map((nft) => (
-                    <NFTCard
-                      key={nft.tokenId}
-                      track={{
-                        id: nft.tokenId,
-                        title: nft.metadata?.name || `NFT #${nft.tokenId}`,
-                        artist: 'You',
-                        // ADDED: Missing coverUrl field that matches AudioTrack interface
-                        coverUrl: nft.metadata?.image || '/placeholder.svg',
-                        // ADDED: Required audioUrl field
-                        audioUrl: nft.metadata?.audio || '',
-                        // ADDED: Optional but expected audioUrls
-                        audioUrls: {
-                          preview: nft.metadata?.audio || '',
-                          standard: nft.metadata?.audio || '',
-                          hq: nft.metadata?.audio || ''
-                        },
-                        price: parseFloat(nft.price) / 1000000 || 0,
-                        royalty: nft.royaltyInfo?.basis_points ? nft.royaltyInfo.basis_points / 100 : 10,
-                        owned: true,
-                        duration: 180,
-                        plays: 0,
-                        image: nft.metadata?.image || '/placeholder.svg'
-                      }}
-                      onTip={() => {}}
-                    />
-                  ))}
-                </div>
+              ) : allUserNFTs.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {displayedNFTs.map((nft) => (
+                      <NFTCard
+                        key={nft.tokenId}
+                        track={{
+                          id: nft.tokenId,
+                          title: nft.metadata?.name || `NFT #${nft.tokenId}`,
+                          artist: 'You',
+                          coverUrl: nft.metadata?.image || '/placeholder.svg',
+                          audioUrl: nft.metadata?.audio || '',
+                          audioUrls: {
+                            preview: nft.metadata?.audio || '',
+                            standard: nft.metadata?.audio || '',
+                            hq: nft.metadata?.audio || ''
+                          },
+                          price: parseFloat(nft.price) / 1000000 || 0,
+                          royalty: nft.royaltyInfo?.basis_points ? nft.royaltyInfo.basis_points / 100 : 10,
+                          owned: true,
+                          duration: 180,
+                          plays: 0,
+                          image: nft.metadata?.image || '/placeholder.svg'
+                        }}
+                        onTip={() => {}}
+                      />
+                    ))}
+                  </div>
+                  <LoadMore
+                    loading={loadingMore}
+                    hasMore={hasMore}
+                    observerRef={loadMoreRef as React.RefObject<HTMLDivElement>}
+                  />
+                </>
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
@@ -179,7 +189,7 @@ export default function ProfilePage() {
                 </Card>
               )}
             </TabsContent>
-           
+
             <TabsContent value="favorites" className="space-y-4 mt-6">
               <Card>
                 <CardContent className="py-12 text-center">
@@ -248,7 +258,7 @@ export default function ProfilePage() {
       </div>
     )
   }
-  
+
   return (
     <div className="min-h-screen bg-background pb-16 sm:pb-20">
       <Header />
@@ -319,7 +329,7 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">{userNFTs.length > 0 ? '12.4K' : '0'}</div>
+              <div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length > 0 ? '12.4K' : '0'}</div>
               <p className="text-xs text-muted-foreground mt-1">Start minting to track</p>
             </CardContent>
           </Card>
@@ -332,12 +342,12 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">{userNFTs.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length}</div>
               <p className="text-xs text-muted-foreground mt-1">On Stellar blockchain</p>
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/mint">
             <Card className="hover:border-primary transition-colors cursor-pointer">

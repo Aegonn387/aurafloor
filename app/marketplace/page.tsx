@@ -1,5 +1,6 @@
 "use client"
 
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,8 @@ import { useStore } from "@/lib/store"
 import { Header } from "@/components/header"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { TipModal } from "@/components/tip-modal"
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { LoadMore } from "@/components/load-more"
 
 interface NFT {
   id: string
@@ -49,7 +52,7 @@ interface DBData {
 }
 
 export default function MarketplacePage() {
-  const [nfts, setNfts] = useState<NFT[]>([])
+  const [allNfts, setAllNfts] = useState<NFT[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filter, setFilter] = useState("all")
@@ -77,7 +80,6 @@ export default function MarketplacePage() {
 
         const transformedNFTs = data.listings?.map((listing: any, index: number) => {
           let dbData: DBData = {}
-
           return {
             id: listing.tokenId || `nft-${index}`,
             tokenId: listing.tokenId || index.toString(),
@@ -101,18 +103,35 @@ export default function MarketplacePage() {
           }
         }) || []
 
-        setNfts(transformedNFTs)
+        setAllNfts(transformedNFTs)
       } else {
         console.error('Failed to fetch NFTs:', response.status)
-        setNfts([])
+        setAllNfts([])
       }
     } catch (error) {
       console.error('Error loading NFTs:', error)
-      setNfts([])
+      setAllNfts([])
     } finally {
       setLoading(false)
     }
   }
+
+  const filteredNFTs = allNfts.filter(nft => {
+    const matchesSearch =
+      (nft.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (nft.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (filter === "all") return matchesSearch
+    if (filter === "music") return matchesSearch
+    if (filter === "collectibles") return matchesSearch
+
+    return matchesSearch
+  })
+
+  const { items: displayedNFTs, loading: loadingMore, hasMore, loadMoreRef } = useInfiniteScroll({
+    initialItems: filteredNFTs,
+    itemsPerPage: 12
+  })
 
   const handleBuy = (nft: NFT) => {
     setSelectedNFT(nft)
@@ -159,18 +178,6 @@ export default function MarketplacePage() {
     setIsMiniPlayer(true)
     setIsPlaying(true)
   }
-
-  const filteredNFTs = nfts.filter(nft => {
-    const matchesSearch =
-      (nft.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (nft.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-
-    if (filter === "all") return matchesSearch
-    if (filter === "music") return matchesSearch
-    if (filter === "collectibles") return matchesSearch
-
-    return matchesSearch
-  })
 
   const getSellerDisplay = (nft: NFT) => {
     if (!nft.seller) return 'Unknown'
@@ -249,93 +256,101 @@ export default function MarketplacePage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredNFTs.map((nft) => (
-                    <div key={nft.id} className="group transition-all duration-200 hover:shadow-md">
-                      <Card className="overflow-hidden border-border h-full flex flex-col">
-                        <div className="relative aspect-square bg-gradient-to-br from-primary/5 to-secondary/5">
-                          <img
-                            src={nft.metadata?.image || '/placeholder-audio.jpg'}
-                            alt={nft.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-                            <Button
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30"
-                              onClick={() => playAudioPreview(nft)}
-                            >
-                              <Play className="h-5 w-5" fill="currentColor" />
-                            </Button>
-                          </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {displayedNFTs.map((nft) => (
+                      <div key={nft.id} className="group transition-all duration-200 hover:shadow-md">
+                        <Card className="overflow-hidden border-border h-full flex flex-col">
+                          <div className="relative aspect-square bg-gradient-to-br from-primary/5 to-secondary/5">
+                            <img
+                              src={nft.metadata?.image || '/placeholder-audio.jpg'}
+                              alt={nft.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+                              <Button
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 transition-all duration-300 bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                                onClick={() => playAudioPreview(nft)}
+                              >
+                                <Play className="h-5 w-5" fill="currentColor" />
+                              </Button>
+                            </div>
 
-                          <Badge className="absolute top-2 right-2 bg-primary text-xs">
-                            <Music className="h-2.5 w-2.5 mr-1" />
-                            Audio
-                          </Badge>
-
-                          {nft.metadata?.duration && (
-                            <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
-                              {formatDuration(nft.metadata.duration)}
+                            <Badge className="absolute top-2 right-2 bg-primary text-xs">
+                              <Music className="h-2.5 w-2.5 mr-1" />
+                              Audio
                             </Badge>
-                          )}
-                        </div>
 
-                        <CardContent className="p-3 flex-grow">
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-base truncate">{nft.title}</CardTitle>
-                              <Badge variant="outline" className="text-xs shrink-0 ml-1">
-                                #{nft.tokenId}
+                            {nft.metadata?.duration && (
+                              <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
+                                {formatDuration(nft.metadata.duration)}
                               </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {nft.description}
-                            </p>
-
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                <span>{getSellerDisplay(nft)}</span>
-                              </div>
-                              <div className="flex items-center gap-1 font-medium">
-                                <DollarSign className="h-3 w-3" />
-                                <span>{nft.price} XLM</span>
-                              </div>
-                            </div>
+                            )}
                           </div>
-                        </CardContent>
 
-                        <CardFooter className="p-3 pt-0">
-                          <div className="flex gap-1 w-full">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => playFullStream(nft)}
-                            >
-                              <Headphones className="h-3.5 w-3.5 mr-1" />
-                              Stream
-                            </Button>
+                          <CardContent className="p-3 flex-grow">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start">
+                                <CardTitle className="text-base truncate">{nft.title}</CardTitle>
+                                <Badge variant="outline" className="text-xs shrink-0 ml-1">
+                                  #{nft.tokenId}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {nft.description}
+                              </p>
 
-                            <Button size="sm" className="flex-1" onClick={() => handleBuy(nft)}>
-                              Buy
-                            </Button>
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  <span>{getSellerDisplay(nft)}</span>
+                                </div>
+                                <div className="flex items-center gap-1 font-medium">
+                                  <DollarSign className="h-3 w-3" />
+                                  <span>{nft.price} XLM</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
 
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="flex-1"
-                              onClick={() => handleTipCreator(nft)}
-                            >
-                              Tip
-                            </Button>
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    </div>
-                  ))}
-                </div>
+                          <CardFooter className="p-3 pt-0">
+                            <div className="flex gap-1 w-full">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => playFullStream(nft)}
+                              >
+                                <Headphones className="h-3.5 w-3.5 mr-1" />
+                                Stream
+                              </Button>
+                              <Button size="sm" className="flex-1" onClick={() => handleBuy(nft)}>
+                                Buy
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="flex-1"
+                                onClick={() => handleTipCreator(nft)}
+                              >
+                                Tip
+                              </Button>
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Cast the ref to match LoadMore's expected type */}
+                  <LoadMore
+                    loading={loadingMore}
+                    hasMore={hasMore}
+                    observerRef={loadMoreRef as React.RefObject<HTMLDivElement>}
+                  />
+                </>
               )}
             </>
           )}

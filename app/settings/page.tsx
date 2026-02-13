@@ -77,7 +77,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
-      
+
       <main className="container px-4 py-6 space-y-6 max-w-4xl mx-auto">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
                             {subscriptionData.status === "active" ? "Active" : "Inactive"}
                           </Badge>
                           <span className="text-xs sm:text-sm text-muted-foreground">
-                            {subscriptionData.price}Ï€ per {subscriptionData.period}
+                            {subscriptionData.price}π per {subscriptionData.period}
                           </span>
                         </div>
                       </div>
@@ -168,7 +168,6 @@ export default function SettingsPage() {
                     <Link href="/subscribe" className="flex-1">
                       <Button className="w-full text-sm sm:text-base">Change Plan</Button>
                     </Link>
-                    
                     <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="flex-1 text-sm sm:text-base">
@@ -220,7 +219,7 @@ export default function SettingsPage() {
                             <p className="text-xs text-muted-foreground">{item.date}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-sm sm:text-base">{item.amount > 0 ? `${item.amount}Ï€` : "Free"}</p>
+                            <p className="font-semibold text-sm sm:text-base">{item.amount > 0 ? `${item.amount}π` : "Free"}</p>
                             <Badge variant="secondary" className="text-xs">
                               {item.status}
                             </Badge>

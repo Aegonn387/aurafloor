@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
@@ -53,7 +53,7 @@ export default function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [userNFTs, setUserNFTs] = useState<Array<{id: string, title: string, artist: string}>>([])
-  
+
   // Loading states for UI feedback
   const [creatingPost, setCreatingPost] = useState(false)
   const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set())
@@ -77,14 +77,16 @@ export default function CommunityPage() {
       const response = await fetch('/api/community/posts')
       if (response.ok) {
         const data = await response.json()
-        const transformedPosts: Post[] = data.map((post: any) => ({
+        // Handle the response structure { posts: [...] }
+        const postsArray = data.posts || []
+        const transformedPosts: Post[] = postsArray.map((post: any) => ({
           id: post.id,
-          author: post.author,
+          author: post.author_name || post.author || "Unknown",
           authorId: post.author_id,
-          role: post.role,
+          role: post.role || "collector",
           content: post.content,
           timestamp: formatTimeAgo(post.created_at),
-          likes: post.like_count || 0,
+          likes: Number(post.like_count) || 0,
           comments: post.comments || [],
           linkedNFT: post.linked_nft_id ? {
             id: post.linked_nft_id,
@@ -95,6 +97,8 @@ export default function CommunityPage() {
           liked: post.liked || false
         }))
         setPosts(transformedPosts)
+      } else {
+        console.error("Failed to fetch posts:", await response.text())
       }
     } catch (error) {
       console.error("Failed to fetch posts:", error)
@@ -150,7 +154,7 @@ export default function CommunityPage() {
 
   const handleCreatePost = async () => {
     if (!postContent.trim() || !user) return
-    
+
     setCreatingPost(true)
     try {
       const response = await fetch("/api/community/posts", {
@@ -163,10 +167,11 @@ export default function CommunityPage() {
       })
 
       if (response.ok) {
-        const newPost = await response.json()
+        const data = await response.json()
+        const newPost = data.post || data
         const postToAdd: Post = {
           id: newPost.id,
-          author: user.username,
+          author: user.dname || user.piuser || user.username || "User",
           authorId: user.uid,
           role: user.role || "collector",
           content: newPost.content,

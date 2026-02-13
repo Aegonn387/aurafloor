@@ -3,6 +3,16 @@ import type { PiUser } from "./pi-auth"
 
 export interface ExtendedPiUser extends PiUser {
   subscription?: "free" | "premium"
+  // Add database fields from u table
+  dname?: string
+  piuser?: string
+  piaddr?: string
+  walletAddress?: string  // Alias for piaddr (Pi Network address) - auto-populated from piaddr
+  avatar?: string
+  bio?: string
+  email?: string
+  subtier?: string
+  stellar_public_key?: string
 }
 
 // ======================
@@ -355,7 +365,13 @@ interface AppStore {
 
 export const useStore = create<AppStore>((set, get) => ({
   user: null,
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    // Auto-populate walletAddress from piaddr for backward compatibility
+    if (user && user.piaddr && !user.walletAddress) {
+      user.walletAddress = user.piaddr
+    }
+    set({ user })
+  },
 
   currentTrack: null,
   isPlaying: false,
@@ -386,12 +402,10 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setIsMiniPlayer: (mini) => set({ isMiniPlayer: mini }),
-
   setCurrentStreamUrl: (url, quality) => set({
     currentStreamUrl: url,
     currentQuality: quality
   }),
-
   setAudioElement: (audio) => set({ audioElement: audio }),
   setProgress: (progress) => set({ progress }),
   setStreamStatus: (status) => set({ streamStatus: status }),
@@ -464,7 +478,6 @@ export const useStore = create<AppStore>((set, get) => ({
   feedPosts: [],
   setPosts: (posts) => set({ posts }),
   setFeedPosts: (posts) => set({ feedPosts: posts }),
-
   addPost: (post) =>
     set((state) => ({
       posts: [post, ...state.posts]
