@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { queryWithRetry, sql } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    const posts = await sql`
-      SELECT 
+    const posts = await queryWithRetry(() => sql`
+      SELECT
         cp.*,
         u.dname as author_name,
         u.piuser as author_piuser,
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       ) pc ON cp.id = pc.post_id
       ORDER BY cp.created_at DESC
       LIMIT 50
-    `
-    
+    `)
+
     return NextResponse.json({ posts })
   } catch (error) {
     console.error('[Community] Error fetching posts:', error)
@@ -42,13 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user from u table using the auth token
-    const users = await sql`
-      SELECT id, piuser, role, subtier 
-      FROM u 
+    const users = await queryWithRetry(() => sql`
+      SELECT id, piuser, role, subtier
+      FROM u
       WHERE id = ${authHeader.replace('Bearer ', '')}
       LIMIT 1
-    `
-    
+    `)
+
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
@@ -56,31 +56,31 @@ export async function POST(request: NextRequest) {
     const user = users[0]
     const body = await request.json()
     const { content, mediaUrl, mediaType, linkedNftId } = body
-    
-    const result = await sql`
+
+    const result = await queryWithRetry(() => sql`
       INSERT INTO community_posts (
-        author_id, 
-        content, 
-        media_url, 
-        media_type, 
-        linked_nft_id, 
+        author_id,
+        content,
+        media_url,
+        media_type,
+        linked_nft_id,
         created_at,
         like_count,
         comment_count
       )
       VALUES (
-        ${user.id}::integer, 
-        ${content}, 
-        ${mediaUrl || null}, 
-        ${mediaType || null}, 
-        ${linkedNftId || null}, 
+        ${user.id}::integer,
+        ${content},
+        ${mediaUrl || null},
+        ${mediaType || null},
+        ${linkedNftId || null},
         NOW(),
         0,
         0
       )
       RETURNING *
-    `
-    
+    `)
+
     // Add author info to response
     const post = {
       ...result[0],
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       author_piuser: user.piuser,
       author_avatar: user.avatar
     }
-    
+
     return NextResponse.json({ post })
   } catch (error) {
     console.error('[Community] Error creating post:', error)

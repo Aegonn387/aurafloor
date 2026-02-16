@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL!);
+import { queryWithRetry, sql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,21 +10,21 @@ export async function POST(request: Request) {
     const { user_pi_address, plan_name, payment_id, amount_pi } = body;
 
     if (!user_pi_address || !plan_name) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing required fields' 
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required fields'
       }, { status: 400 });
     }
 
-    const plans = await sql`
+    const plans = await queryWithRetry(() => sql`
       SELECT * FROM subscription_plans
       WHERE plan_name = ${plan_name} AND is_active = true
-    `;
+    `);
 
     if (plans.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Invalid plan' 
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid plan'
       }, { status: 404 });
     }
 
@@ -34,15 +32,15 @@ export async function POST(request: Request) {
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 1);
 
-    const existing = await sql`
+    const existing = await queryWithRetry(() => sql`
       SELECT * FROM user_subscriptions
       WHERE user_pi_address = ${user_pi_address}
-    `;
+    `);
 
     if (existing.length > 0) {
-      await sql`
+      await queryWithRetry(() => sql`
         UPDATE user_subscriptions
-        SET 
+        SET
           plan_id = ${plan.id},
           tier = ${plan.tier},
           plan_type = ${plan.plan_type},
@@ -53,9 +51,9 @@ export async function POST(request: Request) {
           total_paid = total_paid + ${amount_pi || plan.price_pi},
           updated_at = NOW()
         WHERE user_pi_address = ${user_pi_address}
-      `;
+      `);
     } else {
-      await sql`
+      await queryWithRetry(() => sql`
         INSERT INTO user_subscriptions (
           user_pi_address, plan_id, tier, plan_type, status, expires_at,
           last_payment_amount, last_payment_date, total_paid
@@ -63,20 +61,23 @@ export async function POST(request: Request) {
           ${user_pi_address}, ${plan.id}, ${plan.tier}, ${plan.plan_type}, 'active',
           ${expiryDate.toISOString()}, ${amount_pi || plan.price_pi}, NOW(), ${amount_pi || plan.price_pi}
         )
-      `;
+      `);
     }
 
-    const subscription = await sql`SELECT id FROM user_subscriptions WHERE user_pi_address = ${user_pi_address}`;
+    const subscription = await queryWithRetry(() => sql`
+      SELECT id FROM user_subscriptions WHERE user_pi_address = ${user_pi_address}
+    `);
 
-    await sql`
+    await queryWithRetry(() => sql`
       INSERT INTO subscription_transactions (
         subscription_id, user_pi_address, plan_id, amount_pi, transaction_type, payment_id, status, metadata
       ) VALUES (
-        ${subscription[0].id}, ${user_pi_address}, ${plan.id}, ${amount_pi || plan.price_pi}, 'payment', ${payment_id || null}, 'completed', ${JSON.stringify({ plan_name })}
+        ${subscription[0].id}, ${user_pi_address}, ${plan.id}, ${amount_pi || plan.price_pi}, 'payment',
+        ${payment_id || null}, 'completed', ${JSON.stringify({ plan_name })}
       )
-    `;
+    `);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: `Subscribed to ${plan_name}`,
       subscription: { tier: plan.tier, expires_at: expiryDate.toISOString() }
@@ -98,8 +99,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'User address required' }, { status: 400 });
     }
 
-    let subscriptions = await sql`
-      SELECT 
+    let subscriptions = await queryWithRetry(() => sql`
+      SELECT
         us.*,
         sp.plan_name,
         sp.price_pi,
@@ -112,28 +113,28 @@ export async function GET(request: Request) {
       FROM user_subscriptions us
       LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
       WHERE us.user_pi_address = ${user_pi_address}
-    `;
+    `);
 
     // AUTO-CREATE FREE TIER IF NONE EXISTS
     if (subscriptions.length === 0) {
       const userRole = searchParams.get('role') || 'collector';
       const freePlanName = userRole === 'creator' ? 'Creator Free' : 'Collector Free';
-      
-      const freePlan = await sql`
+
+      const freePlan = await queryWithRetry(() => sql`
         SELECT * FROM subscription_plans WHERE plan_name = ${freePlanName} LIMIT 1
-      `;
+      `);
 
       if (freePlan.length > 0) {
-        await sql`
+        await queryWithRetry(() => sql`
           INSERT INTO user_subscriptions (
             user_pi_address, plan_id, tier, plan_type, status, total_paid
           ) VALUES (
             ${user_pi_address}, ${freePlan[0].id}, 'free', ${userRole}, 'active', 0
           )
-        `;
+        `);
 
-        subscriptions = await sql`
-          SELECT 
+        subscriptions = await queryWithRetry(() => sql`
+          SELECT
             us.*,
             sp.plan_name,
             sp.price_pi,
@@ -146,11 +147,11 @@ export async function GET(request: Request) {
           FROM user_subscriptions us
           LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
           WHERE us.user_pi_address = ${user_pi_address}
-        `;
+        `);
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       subscription: subscriptions[0] || {
         tier: 'free',

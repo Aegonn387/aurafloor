@@ -1,5 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server'
+import { queryWithRetry, sql } from '@/lib/db'
 
 async function getUserFromRequest(request: NextRequest): Promise<{ id: number; username: string } | null> {
   // TODO: Replace with your Pi Network auth
@@ -22,36 +22,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify post exists
-    const postExists = await sql`
+    const postExists = await queryWithRetry(() => sql`
       SELECT id FROM community_posts WHERE id = ${postId}
-    `
+    `)
     if (postExists.length === 0) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
     // Insert comment
-    const result = await sql`
+    const result = await queryWithRetry(() => sql`
       INSERT INTO post_comments (post_id, author_id, content)
       VALUES (${postId}, ${user.id}, ${content.trim()})
       RETURNING *
-    `
+    `)
 
     // Get comment with author info
-    const newComment = await sql`
-      SELECT 
+    const newComment = await queryWithRetry(() => sql`
+      SELECT
         c.*,
         u.piuser as author
       FROM post_comments c
       JOIN u ON c.author_id = u.id
       WHERE c.id = ${result[0].id}
-    `
+    `)
 
     // Update comment count on post
-    await sql`
-      UPDATE community_posts 
+    await queryWithRetry(() => sql`
+      UPDATE community_posts
       SET comment_count = comment_count + 1
       WHERE id = ${postId}
-    `
+    `)
 
     return NextResponse.json(newComment[0], { status: 201 })
   } catch (error) {
@@ -59,6 +59,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 })
   }
 }
-
-
-

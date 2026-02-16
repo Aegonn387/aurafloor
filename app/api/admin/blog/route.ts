@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL!);
+import { queryWithRetry, sql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Fetch all blog posts (for admin view)
 export async function GET() {
   try {
-    const posts = await sql`
+    const posts = await queryWithRetry(() => sql`
       SELECT
         id,
         title,
@@ -28,17 +26,17 @@ export async function GET() {
         updated_at
       FROM blog_posts
       ORDER BY created_at DESC
-    `;
+    `);
 
-    return NextResponse.json({ 
-      success: true, 
-      posts 
+    return NextResponse.json({
+      success: true,
+      posts
     });
   } catch (error) {
     console.error('Failed to fetch posts:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to fetch posts' 
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch posts'
     }, { status: 500 });
   }
 }
@@ -65,11 +63,10 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    // FIXED: Always link to the blog post itself
     const action_text = 'Read More';
     const action_link = `/blog/${finalSlug}`;
 
-    const result = await sql`
+    const result = await queryWithRetry(() => sql`
       INSERT INTO blog_posts (
         title, slug, excerpt, content, category, icon, gradient,
         author, action_text, action_link, is_published, is_featured,
@@ -82,17 +79,17 @@ export async function POST(request: Request) {
         ${is_published ? new Date().toISOString() : null}
       )
       RETURNING *
-    `;
+    `);
 
-    return NextResponse.json({ 
-      success: true, 
-      post: result[0] 
+    return NextResponse.json({
+      success: true,
+      post: result[0]
     });
   } catch (error) {
     console.error('Failed to create post:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to create post' 
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to create post'
     }, { status: 500 });
   }
 }

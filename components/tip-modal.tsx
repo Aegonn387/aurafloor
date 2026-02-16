@@ -1,10 +1,11 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { useStore } from "@/lib/store"
 
 interface TipModalProps {
   open: boolean
@@ -18,10 +19,22 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
   const [customAmount, setCustomAmount] = useState("")
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
   const { toast } = useToast()
+  const user = useStore((state) => state.user)
 
   const presets = [1, 5, 10, 25]
 
   const handleTip = async () => {
+    // Check if user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to send a tip",
+        variant: "destructive",
+      })
+      // Optionally open the auth dialog – you can add a prop or store action for that
+      return
+    }
+
     const amount = selectedPreset || Number.parseFloat(customAmount)
 
     if (!amount || amount <= 0) {
@@ -46,9 +59,6 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
     setLoading(true)
 
     try {
-      // Note: User should already be authenticated via AuthDialog with 'payments' scope
-      // We'll proceed directly to createPayment
-
       const paymentData = {
         amount: amount,
         memo: `Tip for ${trackTitle} by ${artistName}`,
@@ -58,64 +68,53 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
           track: trackTitle,
           timestamp: new Date().toISOString()
         }
-      };
+      }
 
       const callbacks = {
         onReadyForServerApproval: async (paymentId: string) => {
-          console.log("Payment ready for approval:", paymentId);
-
-          // Call backend to approve the payment
+          console.log("Payment ready for approval:", paymentId)
           const response = await fetch('/api/payments/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId })
-          });
-
+          })
           if (!response.ok) {
-            throw new Error('Payment approval failed');
+            throw new Error('Payment approval failed')
           }
-
-          console.log("Payment approved on server");
         },
 
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          console.log("Payment ready for completion:", paymentId, txid);
-
-          // Call backend to complete the payment
+          console.log("Payment ready for completion:", paymentId, txid)
           const response = await fetch('/.netlify/functions/complete-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid })
-          });
-
+          })
           if (!response.ok) {
-            throw new Error('Payment completion failed');
+            throw new Error('Payment completion failed')
           }
-
-          console.log("Payment completed on server");
         },
 
         onCancel: (paymentId: string) => {
-          console.log("Payment cancelled:", paymentId);
+          console.log("Payment cancelled:", paymentId)
           toast({
             title: "Payment cancelled",
             description: "The payment was cancelled",
-          });
+          })
         },
 
         onError: (error: Error, paymentId: string) => {
-          console.error("Payment error:", error, paymentId);
+          console.error("Payment error:", error, paymentId)
           toast({
             title: "Payment failed",
             description: error.message || "An error occurred during payment",
             variant: "destructive",
-          });
+          })
         }
-      };
+      }
 
-      // Create the payment using Pi SDK
-      const payment = await window.Pi.createPayment(paymentData, callbacks);
-      console.log("Payment created:", payment);
+      const payment = await window.Pi.createPayment(paymentData, callbacks)
+      console.log("Payment created:", payment)
 
       toast({
         title: "Tip sent!",
@@ -124,7 +123,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
       onOpenChange(false)
     } catch (error) {
-      console.error("Payment error:", error);
+      console.error("Payment error:", error)
       toast({
         title: "Payment failed",
         description: error instanceof Error ? error.message : "Unable to process tip. Please try again.",
@@ -196,7 +195,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
             className="w-full text-sm sm:text-base min-h-[44px]"
             size="lg"
           >
-            {loading ? "Processing..." : `Send Tip`}
+            {loading ? "Processing..." : "Send Tip"}
           </Button>
         </div>
       </DialogContent>

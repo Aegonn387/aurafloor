@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL!);
+import { queryWithRetry, sql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +10,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { id } = await params; // FIXED: await params
+    const { id } = await params;
 
     const {
       title,
@@ -32,7 +30,7 @@ export async function PUT(
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    const result = await sql`
+    const result = await queryWithRetry(() => sql`
       UPDATE blog_posts
       SET
         title = ${title},
@@ -50,17 +48,17 @@ export async function PUT(
         updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
-    `;
+    `);
 
-    return NextResponse.json({ 
-      success: true, 
-      post: result[0] 
+    return NextResponse.json({
+      success: true,
+      post: result[0]
     });
   } catch (error) {
     console.error('Failed to update post:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to update post' 
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to update post'
     }, { status: 500 });
   }
 }
@@ -71,21 +69,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params; // FIXED: await params
+    const { id } = await params;
 
-    await sql`
+    await queryWithRetry(() => sql`
       DELETE FROM blog_posts
       WHERE id = ${id}
-    `;
+    `);
 
-    return NextResponse.json({ 
-      success: true 
+    return NextResponse.json({
+      success: true
     });
   } catch (error) {
     console.error('Failed to delete post:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to delete post' 
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to delete post'
     }, { status: 500 });
   }
 }
