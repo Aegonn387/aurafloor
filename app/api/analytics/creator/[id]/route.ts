@@ -11,6 +11,30 @@ export async function GET(
     const { id: creatorId } = await context.params;
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30';
+    const user_pi_address = searchParams.get('user_pi_address');
+
+    // CHECK SUBSCRIPTION TIER - ENFORCE ANALYTICS ACCESS
+    if (user_pi_address) {
+      const subscription = await sql`
+        SELECT 
+          us.tier,
+          sp.has_analytics
+        FROM user_subscriptions us
+        LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
+        WHERE us.user_pi_address = ${user_pi_address}
+        LIMIT 1
+      `;
+
+      // Block free users from accessing analytics
+      if (subscription.length > 0 && !subscription[0].has_analytics) {
+        return NextResponse.json({
+          success: false,
+          error: 'Analytics access requires Premium or Premium+ subscription',
+          upgrade_required: true,
+          current_tier: subscription[0].tier
+        }, { status: 403 });
+      }
+    }
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));

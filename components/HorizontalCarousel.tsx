@@ -1,7 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { carouselItems } from './carousel-data';
+
+interface CarouselItem {
+  id: string | number;
+  title: string;
+  description: string;
+  category: string;
+  gradient: string;
+  icon: string;
+  action_text?: string;
+  actionText?: string;
+  action_link?: string;
+  actionLink?: string;
+}
 
 export default function HorizontalCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -11,16 +23,50 @@ export default function HorizontalCarousel() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [cardWidth, setCardWidth] = useState(300); // Dynamic card width
+  const [cardWidth, setCardWidth] = useState(300);
   const [isMobile, setIsMobile] = useState(false);
+  const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch blog posts from API
+  useEffect(() => {
+    async function fetchBlogPosts() {
+      try {
+        const response = await fetch('/api/carousel');
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.posts && data.posts.length > 0) {
+            // Map database fields to carousel format
+            const mappedPosts = data.posts.map((post: any) => ({
+              id: post.id,
+              title: post.title,
+              description: post.description,
+              category: post.category,
+              gradient: post.gradient,
+              icon: post.icon,
+              actionText: post.action_text,
+              actionLink: post.action_link
+            }));
+            setCarouselItems(mappedPosts);
+          }
+        }
+      } catch (error) {
+        console.log('Failed to fetch carousel data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchBlogPosts();
+  }, []);
 
   // Check if mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      // Set card width based on screen size
       if (window.innerWidth < 640) {
-        setCardWidth(window.innerWidth * 0.85); // 85% of screen width on mobile
+        setCardWidth(window.innerWidth * 0.85);
       } else if (window.innerWidth < 768) {
         setCardWidth(280);
       } else if (window.innerWidth < 1024) {
@@ -42,7 +88,6 @@ export default function HorizontalCarousel() {
       setShowLeftArrow(scrollLeft > 10);
       setShowRightArrow(scrollLeft < maxScrollLeft - 10);
 
-      // Calculate current index based on dynamic card width
       const gap = isMobile ? 12 : 16;
       const newIndex = Math.round(scrollLeft / (cardWidth + gap));
       setCurrentIndex(Math.min(newIndex, carouselItems.length - 1));
@@ -74,7 +119,6 @@ export default function HorizontalCarousel() {
     }
   };
 
-  // Touch/swipe handling
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setStartX(e.pageX - (scrollContainerRef.current?.offsetLeft || 0));
@@ -89,7 +133,6 @@ export default function HorizontalCarousel() {
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  // Touch event handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
     setStartX(e.touches[0].pageX - (scrollContainerRef.current?.offsetLeft || 0));
@@ -103,12 +146,11 @@ export default function HorizontalCarousel() {
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  // Auto-scroll every 5 seconds (disable on mobile for better UX)
   useEffect(() => {
-    if (isMobile) return; // Disable auto-scroll on mobile
-    
+    if (isMobile) return;
+
     const interval = setInterval(() => {
-      if (scrollContainerRef.current && !isDragging) {
+      if (scrollContainerRef.current && !isDragging && carouselItems.length > 0) {
         const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
         const maxScrollLeft = scrollWidth - clientWidth;
         const gap = 16;
@@ -118,11 +160,22 @@ export default function HorizontalCarousel() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isDragging, cardWidth, isMobile]);
+  }, [isDragging, cardWidth, isMobile, carouselItems]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full text-center py-12">
+        <p className="text-muted-foreground">Loading updates...</p>
+      </div>
+    );
+  }
+
+  if (carouselItems.length === 0) {
+    return null;
+  }
 
   return (
     <div className="w-full relative">
-      {/* Section Header */}
       <div className="mb-4 sm:mb-6 md:mb-8">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3">
           Discover Exclusive Content
@@ -132,9 +185,7 @@ export default function HorizontalCarousel() {
         </p>
       </div>
 
-      {/* Carousel Container */}
       <div className="relative group">
-        {/* Left Arrow - Show on all screens */}
         {showLeftArrow && (
           <button
             onClick={() => scroll('left')}
@@ -147,7 +198,6 @@ export default function HorizontalCarousel() {
           </button>
         )}
 
-        {/* Scrollable Carousel */}
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
@@ -166,18 +216,16 @@ export default function HorizontalCarousel() {
             scrollSnapType: isMobile ? 'x mandatory' : 'none'
           }}
         >
-          {carouselItems.map((item, index) => (
+          {carouselItems.map((item) => (
             <div
               key={item.id}
               className="flex-shrink-0 w-[85vw] sm:w-64 md:w-80 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg sm:shadow-2xl transform transition-all duration-300 hover:scale-[1.02] sm:hover:scale-[1.03] hover:shadow-xl sm:hover:shadow-2xl"
-              style={{ 
+              style={{
                 scrollSnapAlign: isMobile ? 'start' : 'none',
-                minWidth: isMobile ? '85vw' : undefined 
+                minWidth: isMobile ? '85vw' : undefined
               }}
             >
-              {/* Card with Gradient */}
               <div className={`h-40 sm:h-48 md:h-56 ${item.gradient} p-4 sm:p-5 md:p-7 flex flex-col justify-between relative overflow-hidden`}>
-                {/* Animated background effect */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute -top-6 -right-6 sm:-top-10 sm:-right-10 w-24 h-24 sm:w-40 sm:h-40 bg-white rounded-full blur-2xl sm:blur-3xl"></div>
                 </div>
@@ -198,13 +246,12 @@ export default function HorizontalCarousel() {
                 </p>
               </div>
 
-              {/* Card Footer with Button */}
               <div className="bg-gray-900 p-3 sm:p-4 md:p-5 border-t border-gray-800">
                 <a
-                  href={item.actionLink}
+                  href={item.actionLink || item.action_link}
                   className="inline-flex items-center justify-center w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-2.5 sm:py-3 md:py-3.5 px-4 sm:px-5 md:px-6 rounded-lg sm:rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 shadow-md sm:shadow-lg hover:shadow-xl text-sm sm:text-base"
                 >
-                  <span>{item.actionText}</span>
+                  <span>{item.actionText || item.action_text}</span>
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -214,7 +261,6 @@ export default function HorizontalCarousel() {
           ))}
         </div>
 
-        {/* Right Arrow - Show on all screens */}
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
@@ -228,9 +274,7 @@ export default function HorizontalCarousel() {
         )}
       </div>
 
-      {/* Scroll Indicators */}
       <div className="mt-4 sm:mt-6 md:mt-8 space-y-4 sm:space-y-6">
-        {/* Progress bar */}
         <div className="w-full bg-gray-800 rounded-full h-1.5 sm:h-2 overflow-hidden">
           <div
             className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-300"
@@ -240,7 +284,6 @@ export default function HorizontalCarousel() {
           />
         </div>
 
-        {/* Dots Navigation */}
         <div className="flex justify-center items-center space-x-3 sm:space-x-4">
           <button
             onClick={() => scroll('left')}
@@ -278,7 +321,6 @@ export default function HorizontalCarousel() {
           </button>
         </div>
 
-        {/* Counter */}
         <div className="text-center text-gray-400 text-xs sm:text-sm">
           <span className="text-white font-bold text-base sm:text-lg">{currentIndex + 1}</span>
           <span className="mx-1 sm:mx-2">/</span>
@@ -292,7 +334,6 @@ export default function HorizontalCarousel() {
         </div>
       </div>
 
-      {/* Hide scrollbar styles */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

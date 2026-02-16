@@ -1,20 +1,20 @@
+// lib/pi-auth.ts
 // Type definitions for Pi Network SDK v2.0
 // Based on official Pi SDK documentation
 
 export interface PiUser {
-  uid: string
-  username: string
-  accessToken: string
-  role?: "creator" | "collector"
+  uid: string;
+  username: string;
+  accessToken: string;
+  role?: "creator" | "collector";
 }
 
 export interface PiPayment {
-  amount: number
-  memo: string
-  metadata: Record<string, unknown>
+  amount: number;
+  memo: string;
+  metadata: Record<string, unknown>;
 }
 
-// NEW: Pi SDK type definitions
 export interface PiAuthResult {
   accessToken: string;
   user: {
@@ -33,10 +33,10 @@ export interface PiPaymentCallbacks {
 export interface PiInitOptions {
   version: string;
   sandbox?: boolean;
-  appId?: string;
+  // Note: appId is NOT used in v2.0 – it's derived from the domain
 }
 
-// Add PiSDK interface to global Window
+// Extend global Window interface
 declare global {
   interface Window {
     Pi: {
@@ -54,38 +54,45 @@ declare global {
 }
 
 export const PiAuth = {
-  isAvailable: () => {
-    if (typeof window === "undefined") return false
-    return "Pi" in window
+  /**
+   * Check if Pi SDK is available (i.e., running inside Pi Browser)
+   */
+  isAvailable: (): boolean => {
+    if (typeof window === "undefined") return false;
+    return "Pi" in window;
   },
 
+  /**
+   * Get browser info for debugging
+   */
   getBrowserInfo: () => {
-    if (typeof window === "undefined") return { isPiBrowser: false, userAgent: "" }
+    if (typeof window === "undefined") {
+      return { isPiBrowser: false, userAgent: "" };
+    }
     return {
       isPiBrowser: "Pi" in window,
       userAgent: navigator.userAgent,
-    }
+    };
   },
 
-  // UPDATED: Initialize the Pi SDK with App ID
-  initialize: (sandboxMode: boolean = process.env.NODE_ENV === "development"): boolean => {
-    if (typeof window === "undefined" || !window.Pi) return false;
+  /**
+   * Initialize the Pi SDK.
+   * Must be called after ensuring we are in Pi Browser.
+   * @param sandboxMode - Set to false for Testnet/Mainnet, true for local sandbox.
+   */
+  initialize: (sandboxMode: boolean = false): boolean => {
+    if (typeof window === "undefined" || !window.Pi) {
+      console.warn("[Pi SDK] Not available – are you inside Pi Browser?");
+      return false;
+    }
 
     try {
-      const appId = process.env.NEXT_PUBLIC_PI_APP_ID;
-      
-      if (!appId) {
-        console.error("[Pi SDK] App ID not found in environment variables");
-        return false;
-      }
-
-      window.Pi.init({ 
-        version: "2.0", 
-        sandbox: sandboxMode,
-        appId: appId
+      // No appId needed – it's automatically derived from the registered domain.
+      window.Pi.init({
+        version: "2.0",
+        sandbox: sandboxMode, // false for Testnet/Mainnet
       });
-      
-      console.log("[Pi SDK] Initialized with version 2.0, sandbox:", sandboxMode, "appId:", appId);
+      console.log("[Pi SDK] Initialized with version 2.0, sandbox:", sandboxMode);
       return true;
     } catch (error) {
       console.error("[Pi SDK] Initialization error:", error);
@@ -93,103 +100,104 @@ export const PiAuth = {
     }
   },
 
+  /**
+   * Authenticate the user.
+   * Requests 'username' and 'payments' scopes.
+   */
   authenticate: async (): Promise<PiUser> => {
     if (!window.Pi) {
-      throw new Error("Pi SDK not available")
+      throw new Error("Pi SDK not available – please use Pi Browser");
     }
 
-    const scopes = ["username", "payments"]
+    const scopes = ["username", "payments"];
     const onIncompletePaymentFound = (payment: any) => {
-      console.log("Incomplete payment found:", payment)
-    }
+      // Handle incomplete payments if needed
+      console.log("[Pi SDK] Incomplete payment found:", payment);
+    };
 
     try {
-      const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
-      console.log("Pi authentication successful:", auth)
-
+      const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
+      console.log("[Pi SDK] Authentication successful:", auth);
       return {
         uid: auth.user.uid,
         username: auth.user.username,
         accessToken: auth.accessToken,
-      }
+      };
     } catch (error) {
-      console.error("Pi authentication failed:", error)
-      throw error
+      console.error("[Pi SDK] Authentication failed:", error);
+      throw error;
     }
   },
 
+  /**
+   * Create a payment.
+   */
   createPayment: async (payment: PiPayment): Promise<string> => {
     if (!window.Pi) {
-      throw new Error("Pi SDK not available")
+      throw new Error("Pi SDK not available – please use Pi Browser");
     }
 
-    console.log("Creating Pi payment:", payment)
+    console.log("[Pi SDK] Creating payment:", payment);
 
     const paymentData = {
       amount: payment.amount,
       memo: payment.memo,
       metadata: payment.metadata,
-    }
+    };
 
     const callbacks = {
       onReadyForServerApproval: async (paymentId: string) => {
-        console.log("Payment ready for approval:", paymentId)
-
+        console.log("[Pi SDK] Payment ready for approval:", paymentId);
         try {
           const response = await fetch("/api/payments/approve", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId }),
-          })
-
+          });
           if (!response.ok) {
-            throw new Error("Failed to approve payment")
+            throw new Error("Failed to approve payment");
           }
-
-          console.log("Payment approved:", paymentId)
+          console.log("[Pi SDK] Payment approved:", paymentId);
         } catch (error) {
-          console.error("Payment approval failed:", error)
-          throw error
+          console.error("[Pi SDK] Payment approval failed:", error);
+          throw error;
         }
       },
 
       onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-        console.log("Payment ready for completion:", paymentId, txid)
-
+        console.log("[Pi SDK] Payment ready for completion:", paymentId, txid);
         try {
           const response = await fetch("/.netlify/functions/complete-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId, txid }),
-          })
-
+          });
           if (!response.ok) {
-            throw new Error("Failed to complete payment")
+            throw new Error("Failed to complete payment");
           }
-
-          console.log("Payment completed:", paymentId)
+          console.log("[Pi SDK] Payment completed:", paymentId);
         } catch (error) {
-          console.error("Payment completion failed:", error)
-          throw error
+          console.error("[Pi SDK] Payment completion failed:", error);
+          throw error;
         }
       },
 
       onCancel: (paymentId: string) => {
-        console.log("Payment cancelled:", paymentId)
+        console.log("[Pi SDK] Payment cancelled:", paymentId);
       },
 
       onError: (error: Error, payment?: any) => {
-        console.error("Payment error:", error, payment)
+        console.error("[Pi SDK] Payment error:", error, payment);
       },
-    }
+    };
 
     try {
-      const paymentResult = await window.Pi.createPayment(paymentData, callbacks)
-      console.log("Payment created:", paymentResult)
-      return paymentResult.identifier
+      const paymentResult = await window.Pi.createPayment(paymentData, callbacks);
+      console.log("[Pi SDK] Payment created:", paymentResult);
+      return paymentResult.identifier;
     } catch (error) {
-      console.error("Failed to create payment:", error)
-      throw error
+      console.error("[Pi SDK] Failed to create payment:", error);
+      throw error;
     }
   },
-}
+};
