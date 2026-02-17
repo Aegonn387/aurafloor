@@ -32,7 +32,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       }
 
       // Initialize the SDK (sandbox: false for Testnet)
-      const initialized = PiAuth.initialize(false); // false = Testnet
+      const initialized = PiAuth.initialize(true); // true = Sandbox
       setPiInitialized(initialized);
       if (!initialized) {
         setSdkError("Failed to initialize Pi SDK");
