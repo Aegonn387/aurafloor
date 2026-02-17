@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
         price, resale_fee, edition_type, total_editions, monetization,
         audio_filename, audio_content_type,  -- STILL store filenames for reference
         cover_filename, cover_content_type, expires_at,
-        audio_data, cover_data  -- SET THESE TO NULL - will be filled later by upload endpoints
       ) VALUES (
         ${paymentId}, ${body.creatorWallet}, ${body.title}, ${body.description || null}, ${body.category || null},
         ${body.price}, ${body.resaleFee}, ${body.editionType || null}, ${body.totalEditions || null},
@@ -46,7 +45,6 @@ export async function POST(req: NextRequest) {
         ${body.audioFilename || null}, ${body.audioContentType || null},  -- Optional, for reference only
         ${body.coverFilename || null}, ${body.coverContentType || null},
         ${new Date(Date.now() + 3600000)},  -- 1 hour expiry
-        ${Buffer.from("")}, ${Buffer.from("")}  -- TEMP: Empty buffers for NOT NULL constraint
       )
     `;
 
