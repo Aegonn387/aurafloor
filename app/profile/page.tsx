@@ -147,9 +147,14 @@ export default function ProfilePage() {
                         <div><p className="text-muted-foreground text-xs">Status</p><p className="font-medium capitalize">{subscription?.status}</p></div>
                         <div><p className="text-muted-foreground text-xs">Expires</p><p className="font-medium text-xs">{subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'N/A'}</p></div>
                       </div>
-                      <Button variant="outline" asChild size="sm" className="w-full">
-                        <Link href="/subscribe">Manage Plan</Link>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" asChild size="sm" className="flex-1">
+                          <Link href="/subscribe">Manage Plan</Link>
+                        </Button>
+                        <Button asChild size="sm" className="flex-1">
+                          <Link href="/collector/portfolio">View Portfolio</Link>
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -283,9 +288,14 @@ export default function ProfilePage() {
                   <div><p className="text-muted-foreground text-xs">NFTs/Month</p><p className="font-medium">{subscription?.max_nfts_per_month === -1 ? 'Unlimited' : subscription?.max_nfts_per_month}</p></div>
                   <div><p className="text-muted-foreground text-xs">Expires</p><p className="font-medium text-xs">{subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'N/A'}</p></div>
                 </div>
-                <Button variant="outline" asChild size="sm" className="w-full">
-                  <Link href="/subscribe">Manage Plan</Link>
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" asChild size="sm" className="flex-1">
+                    <Link href="/subscribe">Manage Plan</Link>
+                  </Button>
+                  <Button asChild size="sm" className="flex-1">
+                    <Link href="/creator/dashboard">View Dashboard</Link>
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

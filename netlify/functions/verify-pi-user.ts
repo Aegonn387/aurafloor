@@ -3,7 +3,6 @@ import { Handler } from '@netlify/functions'
 export const handler: Handler = async (event) => {
   console.log('[Pi Verification] Function called')
 
-  // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -19,10 +18,7 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: 'Method not allowed' })
     }
   }
@@ -36,16 +32,16 @@ export const handler: Handler = async (event) => {
     if (!accessToken) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({ error: 'Access token is required' })
       }
     }
 
-    // CORRECT Pi Network API endpoint (mainnet - there is no separate testnet for /me endpoint)
-    const piApiUrl = 'https://api.minepi.com/v2/me'
+    // Use environment variable to switch between testnet and mainnet
+    // For sandbox/testnet: https://api.testnet.minepi.com/v2/me
+    // For mainnet: https://api.minepi.com/v2/me
+    const piApiBase = process.env.PI_API_BASE || 'https://api.testnet.minepi.com'
+    const piApiUrl = `${piApiBase}/v2/me`
 
     console.log('[Pi Verification] Calling Pi API:', piApiUrl)
 
@@ -64,10 +60,7 @@ export const handler: Handler = async (event) => {
       console.error('[Pi Verification] Pi API error:', errorText)
       return {
         statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({
           error: 'Invalid Pi access token',
           details: `Pi API returned ${piResponse.status}: ${errorText}`
@@ -78,13 +71,9 @@ export const handler: Handler = async (event) => {
     const piUserData = await piResponse.json()
     console.log('[Pi Verification] Pi user data received:', piUserData)
 
-    // Return the verified user data to your frontend
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         success: true,
         user: {
@@ -99,10 +88,7 @@ export const handler: Handler = async (event) => {
     console.error('[Pi Verification] Error:', error)
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -19,7 +19,6 @@ export function Footer() {
             <p className="text-xs text-muted-foreground mb-2 max-w-xs">
               Pi-powered audio NFT marketplace for musicians and collectors.
             </p>
-            {/* Social media links removed */}
           </div>
 
           {/* Marketplace */}
@@ -41,6 +40,7 @@ export function Footer() {
               <li><Link href="/promote" className="hover:text-foreground transition-colors">Promote Content</Link></li>
               <li><Link href="/profile" className="hover:text-foreground transition-colors">Dashboard</Link></li>
               <li><Link href="/creator-tools" className="hover:text-foreground transition-colors">Creator Tools</Link></li>
+              <li><Link href="/admin/blog" className="hover:text-foreground transition-colors">Blog Admin</Link></li>
             </ul>
           </div>
 
@@ -50,8 +50,9 @@ export function Footer() {
             <ul className="space-y-1.5 text-sm text-muted-foreground">
               <li><Link href="/community" className="hover:text-foreground transition-colors">Community Hub</Link></li>
               <li><Link href="/subscribe" className="hover:text-foreground transition-colors">Subscriptions</Link></li>
-              {/* External Pi Network link removed */}
               <li><Link href="/help" className="hover:text-foreground transition-colors">Help Center</Link></li>
+              <li><Link href="/apply" className="hover:text-foreground transition-colors">Apply as Creator</Link></li>
+              <li><Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
             </ul>
           </div>
 

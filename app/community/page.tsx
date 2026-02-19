@@ -1,26 +1,25 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { MobileNav } from "@/components/mobile-nav"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { TipModal } from "@/components/tip-modal"
-import { ReportModal } from "@/components/report-modal"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useStore } from "@/lib/store"
-import type { Post, Comment } from "@/lib/store"
+import { useState, useEffect } from "react";
+import { Header } from "@/components/header";
+import { MobileNav } from "@/components/mobile-nav";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { TipModal } from "@/components/tip-modal";
+import { ReportModal } from "@/components/report-modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useStore } from "@/lib/store";
+import type { Post, Comment } from "@/lib/store";
 import {
   Heart,
   MessageCircle,
   Share2,
   Music2,
   Link2,
-  ImageIcon,
   Send,
   TrendingUp,
   Clock,
@@ -30,55 +29,63 @@ import {
   Flag,
   Loader2,
   Check,
-} from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Link from "next/link"
-import { useToast } from "@/components/ui/use-toast"
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
+import { useToast } from "@/components/ui/use-toast";
 
 export const runtime = 'nodejs';
 
 export default function CommunityPage() {
-  const [postContent, setPostContent] = useState("")
-  const [createPostOpen, setCreatePostOpen] = useState(false)
-  const [selectedNFT, setSelectedNFT] = useState<string>("")
-  const [tipModalOpen, setTipModalOpen] = useState(false)
-  const [selectedArtist, setSelectedArtist] = useState<{ name: string; track: string } | null>(null)
-  const [reportModalOpen, setReportModalOpen] = useState(false)
-  const [reportData, setReportData] = useState<{ id: string; title: string } | null>(null)
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({})
-  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [userNFTs, setUserNFTs] = useState<Array<{id: string, title: string, artist: string}>>([])
+  const [postContent, setPostContent] = useState("");
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const [selectedNFT, setSelectedNFT] = useState<string>("");
+  const [tipModalOpen, setTipModalOpen] = useState(false);
+  const [selectedArtist, setSelectedArtist] = useState<{ name: string; track: string } | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportData, setReportData] = useState<{ id: string; title: string } | null>(null);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userNFTs, setUserNFTs] = useState<Array<{id: string, title: string, artist: string}>>([]);
 
-  // Loading states for UI feedback
-  const [creatingPost, setCreatingPost] = useState(false)
-  const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set())
-  const [commentingPosts, setCommentingPosts] = useState<Set<string>>(new Set())
-  const [sharingPosts, setSharingPosts] = useState<Set<string>>(new Set())
+  // UI feedback states
+  const [creatingPost, setCreatingPost] = useState(false);
+  const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
+  const [commentingPosts, setCommentingPosts] = useState<Set<string>>(new Set());
+  const [sharingPosts, setSharingPosts] = useState<Set<string>>(new Set());
 
-  const user = useStore((state) => state.user)
-  const currentTrack = useStore((state) => state.currentTrack)
-  const setCurrentTrack = useStore((state) => state.setCurrentTrack)
+  // Edit post states
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
+  const user = useStore((state) => state.user);
+  const currentTrack = useStore((state) => state.currentTrack);
+  const setCurrentTrack = useStore((state) => state.setCurrentTrack);
+  const { toast } = useToast();
   useEffect(() => {
-    fetchPosts()
+    fetchPosts();
     if (user?.uid) {
-      fetchUserNFTs()
+      fetchUserNFTs();
     }
-  }, [user])
+  }, [user]);
 
   const fetchPosts = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/community/posts')
+      setLoading(true);
+      const response = await fetch('/api/community/posts');
       if (response.ok) {
-        const data = await response.json()
-        // Handle the response structure { posts: [...] }
-        const postsArray = data.posts || []
+        const data = await response.json();
+        const postsArray = data.posts || [];
         const transformedPosts: Post[] = postsArray.map((post: any) => ({
           id: post.id,
           author: post.author_name || post.author || "Unknown",
@@ -95,42 +102,42 @@ export default function CommunityPage() {
             price: post.nft_price || 0
           } : undefined,
           liked: post.liked || false
-        }))
-        setPosts(transformedPosts)
+        }));
+        setPosts(transformedPosts);
       } else {
-        console.error("Failed to fetch posts:", await response.text())
+        console.error("Failed to fetch posts:", await response.text());
       }
     } catch (error) {
-      console.error("Failed to fetch posts:", error)
+      console.error("Failed to fetch posts:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchUserNFTs = async () => {
-    if (!user?.uid) return
+    if (!user?.uid) return;
     try {
-      const response = await fetch(`/api/user/${user.uid}/nfts`)
+      const response = await fetch(`/api/user/${user.uid}/nfts`);
       if (response.ok) {
-        const data = await response.json()
-        setUserNFTs(data)
+        const data = await response.json();
+        setUserNFTs(data);
       }
     } catch (error) {
-      console.error("Failed to fetch user NFTs:", error)
+      console.error("Failed to fetch user NFTs:", error);
     }
-  }
+  };
 
   const handleTip = (artistName: string, trackTitle: string) => {
-    setSelectedArtist({ name: artistName, track: trackTitle })
-    setTipModalOpen(true)
-  }
+    setSelectedArtist({ name: artistName, track: trackTitle });
+    setTipModalOpen(true);
+  };
 
   const handlePlayNFT = async (post: Post) => {
-    if (!post.linkedNFT) return
+    if (!post.linkedNFT) return;
     try {
-      const response = await fetch(`/api/nft/${post.linkedNFT.id}`)
+      const response = await fetch(`/api/nft/${post.linkedNFT.id}`);
       if (response.ok) {
-        const nft = await response.json()
+        const nft = await response.json();
         setCurrentTrack({
           id: nft.id,
           title: nft.title,
@@ -140,22 +147,21 @@ export default function CommunityPage() {
           duration: nft.duration,
           price: nft.price,
           owned: false
-        })
+        });
       }
     } catch (error) {
-      console.error("Failed to play NFT:", error)
+      console.error("Failed to play NFT:", error);
     }
-  }
+  };
 
   const handleReport = (postId: string, postAuthor: string) => {
-    setReportData({ id: postId, title: `Post by ${postAuthor}` })
-    setReportModalOpen(true)
-  }
+    setReportData({ id: postId, title: `Post by ${postAuthor}` });
+    setReportModalOpen(true);
+  };
 
   const handleCreatePost = async () => {
-    if (!postContent.trim() || !user) return
-
-    setCreatingPost(true)
+    if (!postContent.trim() || !user) return;
+    setCreatingPost(true);
     try {
       const response = await fetch("/api/community/posts", {
         method: "POST",
@@ -163,12 +169,12 @@ export default function CommunityPage() {
         body: JSON.stringify({
           content: postContent,
           linkedNFTId: selectedNFT || null,
+          uid: user.uid,
         }),
-      })
-
+      });
       if (response.ok) {
-        const data = await response.json()
-        const newPost = data.post || data
+        const data = await response.json();
+        const newPost = data.post || data;
         const postToAdd: Post = {
           id: newPost.id,
           author: user.dname || user.piuser || user.username || "User",
@@ -185,38 +191,99 @@ export default function CommunityPage() {
             price: 0
           } : undefined,
           liked: false
-        }
-
-        setPosts([postToAdd, ...posts])
-        setPostContent("")
-        setSelectedNFT("")
-        setCreatePostOpen(false)
+        };
+        setPosts([postToAdd, ...posts]);
+        setPostContent("");
+        setSelectedNFT("");
+        setCreatePostOpen(false);
+        toast({ title: "Success", description: "Post created!" });
       } else {
-        const error = await response.json()
-        alert(error.error || "Failed to create post")
+        const error = await response.json();
+        alert(error.error || "Failed to create post");
       }
     } catch (error) {
-      console.error("Failed to create post:", error)
-      alert("Failed to create post")
+      console.error("Failed to create post:", error);
+      alert("Failed to create post");
     } finally {
-      setCreatingPost(false)
+      setCreatingPost(false);
     }
-  }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditContent(post.content);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdatePost = async () => {
+    if (!editingPost || !editContent.trim() || !user) return;
+    try {
+      const response = await fetch(`/api/community/posts/${editingPost.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: editContent,
+          uid: user.uid,
+        }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setPosts(posts.map(p => p.id === editingPost.id ? { ...p, content: updated.content } : p));
+        setEditDialogOpen(false);
+        setEditingPost(null);
+        setEditContent("");
+        toast({ title: "Success", description: "Post updated!" });
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update post");
+      }
+    } catch (error) {
+      console.error("Failed to update post:", error);
+      alert("Failed to update post");
+    }
+  };
+
+  const handleDeleteClick = (postId: string) => {
+    setDeletingPostId(postId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingPostId || !user) return;
+    try {
+      const response = await fetch(`/api/community/posts/${deletingPostId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: user.uid }),
+      });
+      if (response.ok) {
+        setPosts(posts.filter(p => p.id !== deletingPostId));
+        toast({ title: "Success", description: "Post deleted." });
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to delete post");
+      }
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      alert("Failed to delete post");
+    } finally {
+      setDeleteConfirmOpen(false);
+      setDeletingPostId(null);
+    }
+  };
 
   const handleAddComment = async (postId: string) => {
-    const content = commentInputs[postId]?.trim()
-    if (!content || !user) return
-
-    setCommentingPosts(prev => new Set(prev).add(postId))
+    const content = commentInputs[postId]?.trim();
+    if (!content || !user) return;
+    setCommentingPosts(prev => new Set(prev).add(postId));
     try {
       const response = await fetch("/api/community/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId, content }),
-      })
-
+        body: JSON.stringify({ postId, content, uid: user.uid }),
+      });
       if (response.ok) {
-        const newComment = await response.json()
+        const newComment = await response.json();
         setPosts(posts.map(post => {
           if (post.id === postId) {
             const commentToAdd: Comment = {
@@ -227,59 +294,54 @@ export default function CommunityPage() {
               timestamp: "Just now",
               likes: 0,
               liked: false
-            }
-            return {
-              ...post,
-              comments: [...post.comments, commentToAdd]
-            }
+            };
+            return { ...post, comments: [...post.comments, commentToAdd] };
           }
-          return post
-        }))
-        setCommentInputs({ ...commentInputs, [postId]: "" })
+          return post;
+        }));
+        setCommentInputs({ ...commentInputs, [postId]: "" });
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to add comment");
       }
     } catch (error) {
-      console.error("Failed to add comment:", error)
-      alert("Failed to add comment")
+      console.error("Failed to add comment:", error);
+      alert("Failed to add comment");
     } finally {
       setCommentingPosts(prev => {
-        const next = new Set(prev)
-        next.delete(postId)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
-  }
+  };
 
   const handleLike = async (postId: string) => {
     if (!user?.uid) {
-      alert("Please sign in to like posts")
-      return
+      alert("Please sign in to like posts");
+      return;
     }
-
-    setLikingPosts(prev => new Set(prev).add(postId))
+    setLikingPosts(prev => new Set(prev).add(postId));
     try {
-      const post = posts.find(p => p.id === postId)
-      if (!post) return
-
-      const wasLiked = post.liked
-
-      // Optimistic UI update
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+      const wasLiked = post.liked;
+      // Optimistic update
       setPosts(posts.map(p => {
         if (p.id === postId) {
           return {
             ...p,
             liked: !wasLiked,
             likes: wasLiked ? p.likes - 1 : p.likes + 1
-          }
+          };
         }
-        return p
-      }))
-
+        return p;
+      }));
       const response = await fetch(`/api/community/likes/${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid })
-      })
-
+        body: JSON.stringify({ uid: user.uid })
+      });
       if (!response.ok) {
         // Revert on error
         setPosts(posts.map(p => {
@@ -288,64 +350,64 @@ export default function CommunityPage() {
               ...p,
               liked: wasLiked,
               likes: wasLiked ? p.likes + 1 : p.likes - 1
-            }
+            };
           }
-          return p
-        }))
+          return p;
+        }));
       }
     } catch (error) {
-      console.error("Failed to like post:", error)
+      console.error("Failed to like post:", error);
     } finally {
       setLikingPosts(prev => {
-        const next = new Set(prev)
-        next.delete(postId)
-        return next
-      })
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
-  }
+  };
 
   const handleShare = async (post: Post) => {
-    setSharingPosts(prev => new Set(prev).add(post.id))
+    setSharingPosts(prev => new Set(prev).add(post.id));
     try {
       if (navigator.share) {
         await navigator.share({
           title: `Post by ${post.author}`,
           text: post.content,
           url: `${window.location.origin}/community?post=${post.id}`,
-        })
+        });
       } else {
-        await navigator.clipboard.writeText(`${window.location.origin}/community?post=${post.id}`)
-        alert("Link copied to clipboard!")
+        await navigator.clipboard.writeText(`${window.location.origin}/community?post=${post.id}`);
+        toast({ title: "Link copied!", description: "Post URL copied to clipboard." });
       }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
-        console.error("Share failed:", error)
+        console.error("Share failed:", error);
       }
     } finally {
       setTimeout(() => {
         setSharingPosts(prev => {
-          const next = new Set(prev)
-          next.delete(post.id)
-          return next
-        })
-      }, 500)
+          const next = new Set(prev);
+          next.delete(post.id);
+          return next;
+        });
+      }, 500);
     }
-  }
+  };
 
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
-  }
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   if (loading) {
     return (
@@ -359,9 +421,8 @@ export default function CommunityPage() {
         </main>
         <MobileNav />
       </div>
-    )
+    );
   }
-
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
@@ -481,8 +542,20 @@ export default function CommunityPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleReport(post.id, post.author)}>
                             <Flag className="w-4 h-4 mr-2" />
-                            Report Post
+                            Report
                           </DropdownMenuItem>
+                          {user?.uid === post.authorId && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleEditPost(post)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteClick(post.id)}>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -570,8 +643,8 @@ export default function CommunityPage() {
                             onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                             onKeyPress={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault()
-                                handleAddComment(post.id)
+                                e.preventDefault();
+                                handleAddComment(post.id);
                               }
                             }}
                             disabled={commentingPosts.has(post.id)}
@@ -612,28 +685,71 @@ export default function CommunityPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Post Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Post</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={4}
+                placeholder="Edit your post..."
+              />
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdatePost} disabled={!editContent.trim()}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Post</DialogTitle>
+            </DialogHeader>
+            <p className="py-4">Are you sure you want to delete this post? This action cannot be undone.</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <MobileNav />
+
+        {selectedArtist && (
+          <TipModal
+            open={tipModalOpen}
+            onOpenChange={setTipModalOpen}
+            artistName={selectedArtist.name}
+            trackTitle={selectedArtist.track}
+          />
+        )}
+
+        {reportData && (
+          <ReportModal
+            open={reportModalOpen}
+            onOpenChange={setReportModalOpen}
+            contentType="post"
+            contentId={reportData.id}
+            contentTitle={reportData.title}
+          />
+        )}
       </main>
-
-      <MobileNav />
-
-      {selectedArtist && (
-        <TipModal
-          open={tipModalOpen}
-          onOpenChange={setTipModalOpen}
-          artistName={selectedArtist.name}
-          trackTitle={selectedArtist.track}
-        />
-      )}
-
-      {reportData && (
-        <ReportModal
-          open={reportModalOpen}
-          onOpenChange={setReportModalOpen}
-          contentType="post"
-          contentId={reportData.id}
-          contentTitle={reportData.title}
-        />
-      )}
     </div>
-  )
+  );
 }

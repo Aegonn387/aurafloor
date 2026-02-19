@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Mail, Bell, Shield, CreditCard, User, Palette, Moon, Sun, Download, Lock, CheckCircle2, AlertCircle } from "lucide-react"
+import { Mail, Bell, Shield, CreditCard, User, Palette, Moon, Sun, Download, Lock, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react"
 import { useStore } from "@/lib/store"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -17,6 +17,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 export default function SettingsPage() {
   const user = useStore((state) => state.user)
+  const fontSize = useStore((state) => state.fontSize)
+  const animations = useStore((state) => state.animations)
+  const setFontSize = useStore((state) => state.setFontSize)
+  const setAnimations = useStore((state) => state.setAnimations)
+
   const [notifications, setNotifications] = useState(true)
   const [emailUpdates, setEmailUpdates] = useState(true)
   const { theme, setTheme } = useTheme()
@@ -25,6 +30,11 @@ export default function SettingsPage() {
   const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  // Truncate wallet address
+  const truncateAddress = (addr: string) => {
+    if (!addr) return "";
+    return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+  };
   useEffect(() => {
     async function fetchSubscription() {
       if (!user?.piaddr) return
@@ -52,6 +62,14 @@ export default function SettingsPage() {
     }, 1500)
   }
 
+  const handleDataExport = async () => {
+    // Placeholder: trigger a data export
+    alert("Data export feature coming soon. You will receive an email with your data.")
+  }
+
+  const handleEmailSupport = () => {
+    window.location.href = "mailto:aegon23@icloud.com?subject=Aurafloor%20Support%20Request";
+  }
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
@@ -62,7 +80,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="subscription" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-1">
             <TabsTrigger value="subscription" className="text-xs sm:text-sm">Subscription</TabsTrigger>
             <TabsTrigger value="account" className="text-xs sm:text-sm">Account</TabsTrigger>
             <TabsTrigger value="appearance" className="text-xs sm:text-sm">Appearance</TabsTrigger>
@@ -189,9 +207,9 @@ export default function SettingsPage() {
                     <div className="pt-4 border-t">
                       <h4 className="font-medium text-sm sm:text-base mb-3">Need Help?</h4>
                       <p className="text-xs sm:text-sm text-muted-foreground mb-4">Contact support for billing questions or issues.</p>
-                      <Button variant="outline" className="w-full text-sm sm:text-base" disabled>
+                      <Button variant="outline" className="w-full text-sm sm:text-base" onClick={handleEmailSupport}>
                         <Mail className="w-4 h-4 mr-2" />
-                        Contact Support (Coming Soon)
+                        Contact Support
                       </Button>
                     </div>
                   </>
@@ -203,11 +221,12 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="account" className="space-y-4 mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
+                <CardDescription>Your Pi wallet address and account details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
@@ -218,14 +237,26 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="wallet" className="text-sm sm:text-base">Pi Wallet Address</Label>
+                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
+                    <CreditCard className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium text-sm sm:text-base font-mono">
+                      {user?.piaddr ? truncateAddress(user.piaddr) : "Not connected"}
+                    </span>
+                    {user?.piaddr && (
+                      <Badge variant="outline" className="ml-auto text-xs">Primary</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This is the only address associated with your account. Use the same wallet for all transactions.
+                  </p>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="role" className="text-sm sm:text-base">Account Type</Label>
                   <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
                     <Shield className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium text-sm sm:text-base capitalize">{user?.role || "Collector"}</span>
                   </div>
-                </div>
-                <div className="pt-4 border-t">
-                  <Button variant="outline" className="w-full text-sm sm:text-base">Edit Profile</Button>
                 </div>
               </CardContent>
             </Card>
@@ -262,21 +293,24 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Privacy & Security</CardTitle>
-                <CardDescription>Manage your privacy settings</CardDescription>
+                <CardDescription>Manage your privacy settings and data</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label className="text-sm sm:text-base">Data & Privacy</Label>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Control how your data is used and stored</p>
-                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Privacy Settings
+                  <Label className="text-sm sm:text-base">Privacy Policy</Label>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Review how we handle your data</p>
+                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base" asChild>
+                    <Link href="/privacy">
+                      <Lock className="w-4 h-4 mr-2" />
+                      View Privacy Policy
+                      <ExternalLink className="w-3 h-3 ml-2" />
+                    </Link>
                   </Button>
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-sm sm:text-base">Download Your Data</Label>
                   <p className="text-xs sm:text-sm text-muted-foreground">Request a copy of your personal data</p>
-                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base">
+                  <Button variant="outline" className="w-full justify-start text-sm sm:text-base" onClick={handleDataExport}>
                     <Download className="w-4 h-4 mr-2" />
                     Request Data Export
                   </Button>
@@ -308,7 +342,45 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="font-medium text-sm sm:text-base">Theme Preview</h4>
+                  <h4 className="font-medium text-sm sm:text-base">Font Size</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant={fontSize === 'default' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFontSize('default')}
+                      className="text-sm"
+                    >
+                      Default
+                    </Button>
+                    <Button
+                      variant={fontSize === 'large' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFontSize('large')}
+                      className="text-lg"
+                    >
+                      Large
+                    </Button>
+                    <Button
+                      variant={fontSize === 'larger' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFontSize('larger')}
+                      className="text-xl"
+                    >
+                      Larger
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="animations" className="text-sm sm:text-base">Animations</Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Enable interface animations</p>
+                  </div>
+                  <Switch id="animations" checked={animations} onCheckedChange={setAnimations} />
+                </div>
+
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium text-sm sm:text-base mb-3">Theme Preview</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${theme === "light" ? "border-primary bg-primary/5" : "border-border"}`} onClick={() => setTheme("light")}>
                       <div className="flex items-center gap-2 mb-3">
@@ -342,33 +414,10 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
-
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium text-sm sm:text-base mb-3">Display Settings</h4>
-                  <div className="space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <Label htmlFor="font-size" className="text-sm sm:text-base">Font Size</Label>
-                        <p className="text-xs sm:text-sm text-muted-foreground">Adjust text size</p>
-                      </div>
-                      <select className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto">
-                        <option>Default</option>
-                        <option>Large</option>
-                        <option>Larger</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="animations" className="text-sm sm:text-base">Animations</Label>
-                        <p className="text-xs sm:text-sm text-muted-foreground">Enable interface animations</p>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="support" className="space-y-4 mt-6">
             <Card>
               <CardHeader>
@@ -379,9 +428,9 @@ export default function SettingsPage() {
                 <div className="grid gap-2">
                   <h4 className="font-medium text-sm sm:text-base">Contact Us</h4>
                   <p className="text-xs sm:text-sm text-muted-foreground mb-3">Have questions or need help? Reach out to our support team.</p>
-                  <Button className="w-full text-sm sm:text-base" disabled>
+                  <Button className="w-full text-sm sm:text-base" onClick={handleEmailSupport}>
                     <Mail className="w-4 h-4 mr-2" />
-                    Email Support (Coming Soon)
+                    Email Support
                   </Button>
                 </div>
 
@@ -412,7 +461,7 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-xs sm:text-sm text-muted-foreground">Version</span>
-                      <span className="text-xs sm:text-sm font-medium">1.0.0</span>
+                      <span className="text-xs sm:text-sm font-medium">0.1.0</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-xs sm:text-sm text-muted-foreground">Last Updated</span>

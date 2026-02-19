@@ -361,6 +361,12 @@ interface AppStore {
   setNftCache: (cache: Record<string, DatabaseNFT>) => void
   cacheNFT: (id: string, nft: DatabaseNFT) => void
   getCachedNFT: (id: string) => DatabaseNFT | undefined
+
+  // NEW: UI preferences
+  fontSize: 'default' | 'large' | 'larger'
+  animations: boolean
+  setFontSize: (size: 'default' | 'large' | 'larger') => void
+  setAnimations: (enabled: boolean) => void
 }
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -553,7 +559,13 @@ export const useStore = create<AppStore>((set, get) => ({
 
   getCachedNFT: (id) => {
     return get().nftCache[id]
-  }
+  },
+
+  // NEW: UI preferences
+  fontSize: 'default',
+  animations: true,
+  setFontSize: (size) => set({ fontSize: size }),
+  setAnimations: (enabled) => set({ animations: enabled }),
 }))
 
 // Alias for convertDatabaseNFTToTrack to maintain compatibility with existing imports

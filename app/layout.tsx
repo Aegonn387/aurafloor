@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes'
 import { Footer } from '@/components/footer'
 import { Player } from '@/components/player/player'
 import { MobileNav } from '@/components/mobile-nav'
+import { UIPreferenceApplier } from '@/components/ui-preference-applier'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -55,41 +56,30 @@ export default function RootLayout({
         />
         <script dangerouslySetInnerHTML={{
           __html: `
-            // Pi SDK Loader - Ensures proper initialization
             (function() {
               if (typeof window === 'undefined') return;
-
-              // Track initialization state
               window._piSdkState = { loaded: false, initialized: false };
-
-              // Function to initialize Pi
               function initializePiSdk() {
                 if (window.Pi && !window._piSdkState.initialized) {
                   try {
-                    window.Pi.init({ version: "2.0", sandbox: true });
+                    const sandboxMode = ${process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ? 'true' : process.env.NODE_ENV !== 'production' ? 'true' : 'false'};
+                    window.Pi.init({ version: "2.0", sandbox: sandboxMode });
                     window._piSdkState.initialized = true;
                     window._piSdkState.loaded = true;
-                    console.log('Pi SDK initialized globally');
-
-                    // Dispatch custom event so components know SDK is ready
+                    console.log('Pi SDK initialized globally with sandbox:', sandboxMode);
                     window.dispatchEvent(new CustomEvent('pi-sdk-ready'));
                   } catch (error) {
                     console.error('Failed to initialize Pi SDK:', error);
                   }
                 }
               }
-
-              // Check if already loaded (e.g., from another script)
               if (window.Pi) {
                 initializePiSdk();
                 return;
               }
-
-              // Load Pi SDK
               const script = document.createElement('script');
               script.src = 'https://sdk.minepi.com/pi-sdk.js';
               script.async = true;
-
               script.onload = function() {
                 console.log('Pi SDK script loaded');
                 setTimeout(initializePiSdk, 100);
@@ -98,10 +88,7 @@ export default function RootLayout({
                 console.error('Failed to load Pi SDK script');
                 window._piSdkState.error = 'Failed to load Pi SDK';
               };
-
               document.head.appendChild(script);
-
-              // Fallback: check periodically if SDK loaded but onload didn't fire
               let attempts = 0;
               const checkPiLoaded = setInterval(function() {
                 attempts++;
@@ -109,7 +96,7 @@ export default function RootLayout({
                   initializePiSdk();
                   clearInterval(checkPiLoaded);
                 }
-                if (attempts > 20) { // 10 second timeout
+                if (attempts > 20) {
                   clearInterval(checkPiLoaded);
                   console.warn('Pi SDK load timeout');
                 }
@@ -125,19 +112,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* Navigation - Collapsible Sidebar + Mobile Bottom Nav */}
+          <UIPreferenceApplier />
           <MobileNav />
-
-          {/* Main Content - No left margin (sidebar is overlay now) */}
           <div className="min-h-screen flex flex-col pb-20 lg:pb-0">
-            {/* This div grows to fill space and pushes footer down */}
             <div className="flex-grow">
               {children}
             </div>
-
-            {/* Global Audio Player */}
             <Player />
-
             <Footer />
           </div>
         </ThemeProvider>

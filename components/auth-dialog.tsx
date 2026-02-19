@@ -18,11 +18,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   useEffect(() => {
     if (!open) return;
 
-    // Check if we are inside Pi Browser – DO NOT manually load the SDK script
     const checkPiBrowser = async () => {
       setSdkError(null);
 
-      // Pi SDK is injected by the browser, never load it manually
       if (typeof window === "undefined") return;
 
       if (!window.Pi) {
@@ -31,8 +29,12 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         return;
       }
 
-      // Initialize the SDK (sandbox: false for Testnet)
-      const initialized = PiAuth.initialize(true); // true = Sandbox
+      // Use sandbox mode based on environment variable or default to true in development
+      // Set NEXT_PUBLIC_PI_SANDBOX=false in production to use live network, or true to force sandbox
+      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' || 
+                         (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false');
+      
+      const initialized = PiAuth.initialize(sandboxMode);
       setPiInitialized(initialized);
       if (!initialized) {
         setSdkError("Failed to initialize Pi SDK");
@@ -43,7 +45,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   }, [open]);
 
   const verifyPiUser = async (accessToken: string) => {
-    // Adjust base URL for local vs production
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const baseUrl = isLocalhost ? "http://localhost:8888" : "";
     const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`;
@@ -97,11 +98,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const authResult = await PiAuth.authenticate();
       console.log("[Auth] Success:", authResult);
 
-      // Verify with backend
       const verifiedData = await verifyPiUser(authResult.accessToken);
       console.log("[Auth] User verified:", verifiedData.user);
 
-      // Store auth data for role selection (avoid re-authenticating)
       setStoredAuth({
         accessToken: authResult.accessToken,
         user: verifiedData.user,
@@ -127,15 +126,13 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         throw new Error("Please connect your wallet first");
       }
 
-      // Use stored authentication data – no second Pi.authenticate() call
+      // FIX: spread all user fields from storedAuth.user to include piaddr and other database fields
       setUser({
-        uid: storedAuth.user.uid,
-        username: storedAuth.user.username,
+        ...storedAuth.user,
         accessToken: storedAuth.accessToken,
         role: role,
       });
 
-      // Clear stored auth and close dialog
       setStoredAuth(null);
       onOpenChange(false);
       setTimeout(() => setStep("connect"), 300);

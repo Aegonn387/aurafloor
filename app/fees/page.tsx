@@ -15,9 +15,7 @@ export default function FeesPage() {
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
-      
       <main className="container px-4 py-6 space-y-6 max-w-4xl mx-auto">
-        {/* Page header with back button */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="shrink-0">
             <Link href="/settings">
@@ -48,39 +46,40 @@ export default function FeesPage() {
                 This document outlines all fees, subscriptions, and revenue sharing associated with the Aurafloor platform. All transaction fees are automatically processed by Smart Contracts unless otherwise stated.
               </p>
 
-              {/* Section 1: NFT Sales Fees */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">1. NFT Sales Fees</h2>
-                
                 <h3 className="font-semibold text-sm sm:text-base mt-4">Primary Sale (Initial Minting & Sale)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center my-4">
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-2xl font-bold text-primary">10%</p>
-                    <p className="text-sm font-medium">Platform Fee</p>
-                    <p className="text-xs text-muted-foreground mt-2">Deducted from final sale price</p>
+                    <p className="text-sm font-medium">Standard Platform Fee</p>
+                    <p className="text-xs text-muted-foreground mt-2">For free users</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
-                    <p className="text-2xl font-bold text-green-600">90%</p>
-                    <p className="text-sm font-medium">Creator Receives</p>
-                    <p className="text-xs text-muted-foreground mt-2">Net proceeds after platform fee</p>
+                    <p className="text-2xl font-bold text-green-600">5%</p>
+                    <p className="text-sm font-medium">Subscriber Platform Fee</p>
+                    <p className="text-xs text-muted-foreground mt-2">Premium subscribers save 50%</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-sm font-medium">Gas Fees Apply</p>
-                    <p className="text-xs text-muted-foreground mt-2">Paid by the minter/seller to the Pi Network</p>
+                    <p className="text-xs text-muted-foreground mt-2">Paid by the minter to the Pi Network</p>
                   </div>
                 </div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Subscribers pay only 5% platform fee on primary sales, a 50% discount from the standard 10% rate. Creator receives the remaining 95% (for subscribers) or 90% (for free users) after platform fee.
+                </p>
 
                 <h3 className="font-semibold text-sm sm:text-base mt-6">Secondary Sale (Resale by Collector)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center my-4">
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-2xl font-bold text-primary">5%</p>
                     <p className="text-sm font-medium">Platform Fee</p>
-                    <p className="text-xs text-muted-foreground mt-2">Deducted from sale price</p>
+                    <p className="text-xs text-muted-foreground mt-2">Same for all users</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-2xl font-bold text-amber-600">5-15%</p>
                     <p className="text-sm font-medium">Creator Royalty</p>
-                    <p className="text-xs text-muted-foreground mt-2">Set by Creator at minting</p>
+                    <p className="text-xs text-muted-foreground mt-2">Set by creator at minting</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-xl font-bold">Remainder</p>
@@ -95,7 +94,6 @@ export default function FeesPage() {
                 <p className="text-sm text-muted-foreground"><strong>Note:</strong> Creator royalties are automatically enforced and distributed by Smart Contracts on every secondary sale.</p>
               </section>
 
-              {/* Section 2: Tipping Fees */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">2. Creator Tipping Fees</h2>
                 <p className="text-muted-foreground">
@@ -109,28 +107,27 @@ export default function FeesPage() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A 0.5% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure. <strong>This fee structure is subject to review and may be adjusted in the future to ensure it continues to meet the goals of supporting creators while maintaining platform security and sustainability.</strong> All adjustments will be communicated transparently.
+                  A 0.5% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure. This fee structure is subject to review and may be adjusted in the future. All adjustments will be communicated transparently.
                 </p>
               </section>
 
-              {/* Section 3: Subscription Plans */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">3. Subscription Plans</h2>
                 <p className="text-muted-foreground">
-                  Aurafloor offers optional subscription plans that unlock enhanced features and support the platform.
+                  Aurafloor offers optional subscription plans that unlock enhanced features and reduced platform fees (5% instead of 10%).
                 </p>
 
                 <h3 className="font-semibold text-sm sm:text-base mt-4">Collector Subscriptions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
                   <div className="p-4 bg-background border rounded-lg text-center">
                     <p className="text-2xl font-bold text-primary">5 π/month</p>
-                    <p className="text-sm font-medium">Premium Collector</p>
-                    <p className="text-xs text-muted-foreground mt-2">Ad-free streaming, standard features</p>
+                    <p className="text-sm font-medium">Collector Premium</p>
+                    <p className="text-xs text-muted-foreground mt-2">5% fees, ad‑free, HD audio, early access</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg text-center">
-                    <p className="text-2xl font-bold text-purple-600">10 π/month</p>
-                    <p className="text-sm font-medium">Premium+ Collector</p>
-                    <p className="text-xs text-muted-foreground mt-2">All Premium features + exclusive perks</p>
+                    <p className="text-2xl font-bold text-purple-600">15 π/month</p>
+                    <p className="text-sm font-medium">Collector Premium+</p>
+                    <p className="text-xs text-muted-foreground mt-2">Everything in Premium + analytics, VIP support</p>
                   </div>
                 </div>
 
@@ -138,13 +135,13 @@ export default function FeesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
                   <div className="p-4 bg-background border rounded-lg text-center">
                     <p className="text-2xl font-bold text-primary">10 π/month</p>
-                    <p className="text-sm font-medium">Premium Creator</p>
-                    <p className="text-xs text-muted-foreground mt-2">Advanced analytics, promotion tools</p>
+                    <p className="text-sm font-medium">Creator Premium</p>
+                    <p className="text-xs text-muted-foreground mt-2">5% fees, 10 mints/month, analytics</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg text-center">
-                    <p className="text-2xl font-bold text-purple-600">20 π/month</p>
-                    <p className="text-sm font-medium">Elite Creator</p>
-                    <p className="text-xs text-muted-foreground mt-2">All Premium tools + featured placement & support</p>
+                    <p className="text-2xl font-bold text-purple-600">25 π/month</p>
+                    <p className="text-sm font-medium">Creator Premium+</p>
+                    <p className="text-xs text-muted-foreground mt-2">Everything in Premium + unlimited mints, AI insights</p>
                   </div>
                 </div>
 
@@ -155,11 +152,10 @@ export default function FeesPage() {
                 </div>
               </section>
 
-              {/* Section 4: Ad Revenue Share for Free Creators */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">4. Ad Revenue Share for Free Creators</h2>
                 <p className="text-muted-foreground">
-                  Creators who use the platform without a paid subscription (&quot;Free Creators&quot;) are eligible to earn a share of advertising revenue.
+                  Creators who use the platform without a paid subscription are eligible to earn a share of advertising revenue.
                 </p>
                 <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto">
                   <div className="text-center">
@@ -169,24 +165,22 @@ export default function FeesPage() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Free Creators receive <strong>40% of the net revenue</strong> that Aurafloor earns from Pi Ads served during streams of their Audio Content. Revenue share is calculated by the Platform based on aggregated advertising performance metrics and paid out according to Platform schedules. Amounts may vary with advertising market conditions.
+                  Free Creators receive <strong>40% of the net revenue</strong> that Aurafloor earns from Pi Ads served during streams of their audio content. Revenue share is calculated by the platform based on aggregated advertising performance metrics and paid out according to platform schedules. Amounts may vary with advertising market conditions.
                 </p>
               </section>
 
-              {/* Section 5: Network & Service Fees */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">5. Network & Service Fees</h2>
                 <div className="space-y-1 text-muted-foreground">
-                  <p className="text-sm"><strong>Blockchain (Gas) Fees:</strong> Every on-chain transaction requires payment of network fees (&quot;gas&quot;) to the Pi/Stellar Network. These fees vary and are non-refundable.</p>
+                  <p className="text-sm"><strong>Blockchain (Gas) Fees:</strong> Every on‑chain transaction requires payment of network fees to the Pi/Stellar Network. These fees vary and are non‑refundable.</p>
                   <p className="text-sm"><strong>No Hidden Fees:</strong> Apart from the fees listed above, Aurafloor charges no additional fees for standard platform use.</p>
                 </div>
               </section>
 
-              {/* Section 6: Taxes */}
               <section className="space-y-2">
                 <h2 className="font-semibold text-base sm:text-lg">6. Taxes</h2>
                 <p className="text-muted-foreground">
-                  You are solely responsible for determining, reporting, and paying any taxes applicable to your transactions on the Platform. Aurafloor does not withhold or remit taxes on your behalf.
+                  You are solely responsible for determining, reporting, and paying any taxes applicable to your transactions on the platform. Aurafloor does not withhold or remit taxes on your behalf.
                 </p>
               </section>
 
@@ -199,7 +193,6 @@ export default function FeesPage() {
           </CardContent>
         </Card>
       </main>
-
       <MobileNav />
     </div>
   )

@@ -1,61 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { queryWithRetry, sql } from '@/lib/db'
+import { NextRequest, NextResponse } from 'next/server';
+import { queryWithRetry, sql } from '@/lib/db';
 
-async function getUserFromRequest(request: NextRequest): Promise<{ id: number; username: string } | null> {
-  // TODO: Replace with your Pi Network auth
-  return { id: 1, username: 'CurrentUser' }
-}
-
-// POST: Add a comment to a post
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromRequest(request)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const body = await request.json();
+    const { postId, content, uid } = body;
+
+    if (!postId || !content || !uid) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const body = await request.json()
-    const { postId, content } = body
-
-    if (!postId || !content || content.trim().length === 0) {
-      return NextResponse.json({ error: 'Post ID and content are required' }, { status: 400 })
+    const user = await queryWithRetry(() => sql`
+      SELECT dname, piuser FROM u WHERE id = ${uid} LIMIT 1
+    `);
+    if (user.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
-    // Verify post exists
-    const postExists = await queryWithRetry(() => sql`
-      SELECT id FROM community_posts WHERE id = ${postId}
-    `)
-    if (postExists.length === 0) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    }
-
-    // Insert comment
     const result = await queryWithRetry(() => sql`
-      INSERT INTO post_comments (post_id, author_id, content)
-      VALUES (${postId}, ${user.id}, ${content.trim()})
-      RETURNING *
-    `)
+      INSERT INTO post_comments (post_id, author_id, content, created_at, like_count)
+      VALUES (${postId}, ${uid}, ${content}, NOW(), 0)
+      RETURNING id, created_at
+    `);
 
-    // Get comment with author info
-    const newComment = await queryWithRetry(() => sql`
-      SELECT
-        c.*,
-        u.piuser as author
-      FROM post_comments c
-      JOIN u ON c.author_id = u.id
-      WHERE c.id = ${result[0].id}
-    `)
-
-    // Update comment count on post
     await queryWithRetry(() => sql`
-      UPDATE community_posts
-      SET comment_count = comment_count + 1
-      WHERE id = ${postId}
-    `)
+      UPDATE community_posts SET comment_count = comment_count + 1 WHERE id = ${postId}
+    `);
 
-    return NextResponse.json(newComment[0], { status: 201 })
+    const newComment = {
+      id: result[0].id,
+      author: user[0].dname || user[0].piuser,
+      authorId: uid,
+      content,
+      timestamp: 'Just now',
+      likes: 0,
+      liked: false,
+    };
+
+    return NextResponse.json({ comment: newComment });
   } catch (error) {
-    console.error('[Community API] Error adding comment:', error)
-    return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 });
   }
 }
