@@ -25,9 +25,10 @@ export const handler: Handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}')
-    const { accessToken } = body
+    const { accessToken, sandbox } = body
 
     console.log('[Pi Verification] Access token received:', accessToken ? 'Present' : 'Missing')
+    console.log('[Pi Verification] Sandbox mode:', sandbox)
 
     if (!accessToken) {
       return {
@@ -37,9 +38,24 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Use environment variable to switch between testnet and mainnet
-    // For sandbox/testnet: https://api.testnet.minepi.com/v2/me
-    // For mainnet: https://api.minepi.com/v2/me
+    // If sandbox mode is true, return mock user data without calling Pi API
+    if (sandbox) {
+      console.log('[Pi Verification] Returning mock user for sandbox')
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          success: true,
+          user: {
+            uid: 'sandbox-uid-12345',
+            username: 'sandbox_user',
+            verified: true
+          }
+        })
+      }
+    }
+
+    // Production: call Pi API
     const piApiBase = process.env.PI_API_BASE || 'https://api.testnet.minepi.com'
     const piApiUrl = `${piApiBase}/v2/me`
 

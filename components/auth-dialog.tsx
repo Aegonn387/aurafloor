@@ -29,11 +29,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         return;
       }
 
-      // Use sandbox mode based on environment variable or default to true in development
-      // Set NEXT_PUBLIC_PI_SANDBOX=false in production to use live network, or true to force sandbox
-      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' || 
+      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ||
                          (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false');
-      
+
       const initialized = PiAuth.initialize(sandboxMode);
       setPiInitialized(initialized);
       if (!initialized) {
@@ -44,7 +42,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     checkPiBrowser();
   }, [open]);
 
-  const verifyPiUser = async (accessToken: string) => {
+  const verifyPiUser = async (accessToken: string, sandbox: boolean) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const baseUrl = isLocalhost ? "http://localhost:8888" : "";
     const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`;
@@ -57,7 +55,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ accessToken }),
+        body: JSON.stringify({ accessToken, sandbox }),
       });
 
       console.log("[Verify] Status:", verificationResponse.status);
@@ -94,11 +92,14 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         throw new Error("Pi SDK not initialized yet. Please wait.");
       }
 
+      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ||
+                         (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false');
+
       console.log("[Auth] Starting Pi authentication...");
       const authResult = await PiAuth.authenticate();
       console.log("[Auth] Success:", authResult);
 
-      const verifiedData = await verifyPiUser(authResult.accessToken);
+      const verifiedData = await verifyPiUser(authResult.accessToken, sandboxMode);
       console.log("[Auth] User verified:", verifiedData.user);
 
       setStoredAuth({
@@ -126,7 +127,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         throw new Error("Please connect your wallet first");
       }
 
-      // FIX: spread all user fields from storedAuth.user to include piaddr and other database fields
       setUser({
         ...storedAuth.user,
         accessToken: storedAuth.accessToken,
