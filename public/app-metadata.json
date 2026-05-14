@@ -1,0 +1,82 @@
+{
+  "app": {
+    "name": "Aurafloor",
+    "description": "Decentralized content ecosystem on Pi Network — mint audio NFTs, stream, blog, and earn AURA.",
+    "url": "https://aurafloor.co.za",
+    "logo": "/logo.png",
+    "category": "entertainment",
+    "pi_network_integration": {
+      "auth": true,
+      "payments": true,
+      "ads": true,
+      "launchpad": true
+    }
+  },
+  "token": {
+    "name": "Aurafloor Token",
+    "symbol": "AURA",
+    "decimals": 7,
+    "total_supply": 1000000000,
+    "contract": {
+      "network": "pi-testnet",
+      "address": "",
+      "source": "soroban/aura-token/src/lib.rs",
+      "standard": "PiRC1"
+    },
+    "launchpad_allocation": 50000000,
+    "initial_liquidity_pi_target": "200000-500000",
+    "initial_liquidity_aura": 50000000,
+    "swap_fee_percent": 0.3,
+    "burn_mechanisms": {
+      "subscription_payment_burn_percent": 20,
+      "promotion_burn_percent": 100
+    },
+    "staking": {
+      "moderation_bond_min": 500,
+      "dao_stake_min": 100,
+      "writer_stake_min": 100,
+      "lockup_periods": ["1 year", "2 years", "3 years"],
+      "yield_source": "swap_fees"
+    }
+  },
+  "tokenomics": {
+    "community_rewards": { "percent": 65, "amount": 650000000, "schedule": "yearly_halving" },
+    "liquidity_provision": { "percent": 5, "amount": 50000000, "vesting": "permanently_locked" },
+    "ecosystem_fund": { "percent": 5, "amount": 50000000, "vesting": "4_year_linear" },
+    "team_allocation": { "percent": 15, "amount": 150000000, "vesting": "3_year_1_year_cliff" },
+    "strategic_reserve": { "percent": 5, "amount": 50000000, "vesting": "multi_sig_controlled" },
+    "launchpad_incentives": { "percent": 5, "amount": 50000000, "notes": "engagement_weighted" },
+    "unclaimed_launchpad_tokens_burned_after_days": 90
+  },
+  "emission_schedule": {
+    "year_1": 100000000,
+    "year_2": 50000000,
+    "year_3": 25000000,
+    "year_4": 12500000,
+    "perpetual_tail": 6250000,
+    "first_halving": "2027-01-01"
+  },
+  "governance": {
+    "model": "progressive_decentralization",
+    "full_dao_target": "year_2_3",
+    "voting": "quadratic",
+    "quorum_percent": 10,
+    "proposal_threshold_aura": 1000,
+    "timelock_days": 7
+  },
+  "links": {
+    "website": "https://aurafloor.co.za",
+    "whitepaper": "https://aurafloor.co.za/whitepaper",
+    "twitter": "@aura_place",
+    "discord": "",
+    "email": "Aegonn@aurafloor.co.za"
+  },
+  "pirc1_compliance": {
+    "product_first": true,
+    "working_application": true,
+    "no_premining": true,
+    "permanent_liquidity_lock": true,
+    "engagement_based_distribution": true,
+    "immediate_utility": true
+  }
+}

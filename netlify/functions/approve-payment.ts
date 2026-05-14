@@ -1,97 +1,56 @@
-﻿import { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
-import { v4 as uuidv4 } from 'uuid';
-
-const sql = neon(process.env.DATABASE_URL!);
-
-interface NFTMintRequest {
-  creatorWallet: string;
-  title: string;
-  description: string;
-  category: string;
-  price: number;
-  resaleFee: number;
-  editionType?: string;
-  totalEditions?: number;
-  monetization?: any;
-  audioData: string;
-  audioFilename: string;
-  audioContentType: string;
-  coverData?: string;
-  coverFilename?: string;
-  coverContentType?: string;
-}
+import { Handler } from '@netlify/functions'
 
 export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod === 'OPTIONS') {
     return {
-      statusCode: 405,
+      statusCode: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
       },
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
+      body: '',
+    }
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' }
   }
 
   try {
-    const body = JSON.parse(event.body || '{}') as NFTMintRequest;
-
-    const requiredFields = ['creatorWallet', 'title', 'price', 'resaleFee', 'audioData', 'audioFilename', 'audioContentType'] as const;
-    const missingFields = requiredFields.filter(field => !body[field]);
-
-    if (missingFields.length > 0) {
+    const { paymentId } = JSON.parse(event.body || '{}')
+    if (!paymentId) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'Missing required fields',
-          missing: missingFields
-        })
-      };
+        body: JSON.stringify({ error: 'paymentId is required' }),
+      }
     }
 
-    if (body.resaleFee < 500 || body.resaleFee > 1500) {
+    const API_KEY = process.env.PI_NETWORK_API_KEY
+    if (!API_KEY) {
+      console.error('PI_NETWORK_API_KEY environment variable is not set')
       return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'Resale fee must be between 5% and 15% (500-1500)'
-        })
-      };
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Server configuration error: API key missing' }),
+      }
     }
 
-    console.log('[Approve Payment] Processing NFT mint request for:', body.title);
+    const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
-    const paymentId = uuidv4();
-    console.log('[Approve Payment] Generated payment ID:', paymentId);
-
-    const audioBuffer = Buffer.from(body.audioData, 'base64');
-    const coverBuffer = body.coverData ? Buffer.from(body.coverData, 'base64') : null;
-
-    await sql`
-      INSERT INTO pending_nft_mints (
-        payment_id, creator_wallet, title, description, category,
-        price, resale_fee, edition_type, total_editions, monetization,
-        audio_data, audio_filename, audio_content_type,
-        cover_data, cover_filename, cover_content_type, expires_at
-      ) VALUES (
-        ${paymentId}, ${body.creatorWallet}, ${body.title}, ${body.description || null}, ${body.category || null},
-        ${body.price}, ${body.resaleFee}, ${body.editionType || null}, ${body.totalEditions || null}, 
-        ${body.monetization ? JSON.stringify(body.monetization) : null},
-        ${audioBuffer}, ${body.audioFilename}, ${body.audioContentType},
-        ${coverBuffer}, ${body.coverFilename || null}, ${body.coverContentType || null},
-        ${new Date(Date.now() + 3600000)}
-      )
-    `;
-
-    console.log('[Approve Payment] NFT data stored for payment:', paymentId);
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Pi payment approval error:', errorText)
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: 'Pi payment approval failed', details: errorText }),
+      }
+    }
 
     return {
       statusCode: 200,
@@ -99,29 +58,13 @@ export const handler: Handler = async (event) => {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({
-        success: true,
-        paymentId,
-        amount: body.price,
-        memo: `Mint NFT: ${body.title}`,
-        message: 'Payment ready for Pi Browser approval.'
-      })
-    };
-
-  } catch (error) {
-    console.error('[Approve Payment] Error:', error);
-
+      body: JSON.stringify({ success: true }),
+    }
+  } catch (error: any) {
+    console.error(error)
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        error: 'Failed to create payment',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        success: false
-      })
-    };
+      body: JSON.stringify({ error: 'Internal server error', message: error.message }),
+    }
   }
-};
+}

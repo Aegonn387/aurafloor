@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
 import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react";
-import { PiAuth } from "@/lib/pi-auth";
+import { getPiInitOptions } from "@/lib/pi-config";
 
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [loading, setLoading] = useState(false);
@@ -14,6 +14,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [piInitialized, setPiInitialized] = useState(false);
   const [sdkError, setSdkError] = useState<string | null>(null);
   const [storedAuth, setStoredAuth] = useState<{ accessToken: string; user: any } | null>(null);
+  const [incompletePaymentError, setIncompletePaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -29,20 +30,22 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         return;
       }
 
-      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ||
-                         (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false');
-
-      const initialized = PiAuth.initialize(sandboxMode);
-      setPiInitialized(initialized);
-      if (!initialized) {
+      try {
+        const options = getPiInitOptions();
+        window.Pi.init(options);
+        setPiInitialized(true);
+        console.log("[Pi SDK] Initialized successfully");
+      } catch (error) {
+        console.error("[Pi SDK] Init error:", error);
         setSdkError("Failed to initialize Pi SDK");
+        setPiInitialized(false);
       }
     };
 
     checkPiBrowser();
   }, [open]);
 
-  const verifyPiUser = async (accessToken: string, sandbox: boolean) => {
+  const verifyPiUser = async (accessToken: string) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const baseUrl = isLocalhost ? "http://localhost:8888" : "";
     const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`;
@@ -55,7 +58,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ accessToken, sandbox }),
+        body: JSON.stringify({ accessToken }),
       });
 
       console.log("[Verify] Status:", verificationResponse.status);
@@ -79,12 +82,36 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     }
   };
 
+  // Completes an incomplete payment via the backend – never silently ignore.
+  const handleIncompletePayment = async (payment: any) => {
+    console.log("[IncompletePayment] Found:", payment);
+    setIncompletePaymentError(null);
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const baseUrl = isLocalhost ? "http://localhost:8888" : "";
+    try {
+      const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Backend ${res.status}: ${errText}`);
+      }
+      console.log("[IncompletePayment] Completed via backend");
+    } catch (err: any) {
+      console.error("[IncompletePayment] Failed:", err);
+      setIncompletePaymentError(`Payment completion failed: ${err.message}`);
+    }
+  };
+
   const handleConnect = async () => {
     setLoading(true);
     setSdkError(null);
+    setIncompletePaymentError(null);
 
     try {
-      if (!PiAuth.isAvailable()) {
+      if (!window.Pi) {
         throw new Error("Pi SDK not available. Please use Pi Browser.");
       }
 
@@ -92,14 +119,12 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         throw new Error("Pi SDK not initialized yet. Please wait.");
       }
 
-      const sandboxMode = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ||
-                         (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_PI_SANDBOX !== 'false');
-
       console.log("[Auth] Starting Pi authentication...");
-      const authResult = await PiAuth.authenticate();
+      const scopes = ["username", "payments"];
+      const authResult = await window.Pi.authenticate(scopes, handleIncompletePayment);
       console.log("[Auth] Success:", authResult);
 
-      const verifiedData = await verifyPiUser(authResult.accessToken, sandboxMode);
+      const verifiedData = await verifyPiUser(authResult.accessToken);
       console.log("[Auth] User verified:", verifiedData.user);
 
       setStoredAuth({
@@ -190,6 +215,15 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   )}
                 </p>
               </div>
+
+              {incompletePaymentError && (
+                <div className="rounded-lg p-2.5 sm:p-3 text-xs bg-destructive/10 border border-destructive/20">
+                  <p className="text-destructive text-center flex items-center justify-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {incompletePaymentError}
+                  </p>
+                </div>
+              )}
 
               <Button
                 onClick={handleConnect}

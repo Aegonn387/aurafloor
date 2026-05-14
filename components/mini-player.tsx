@@ -24,6 +24,61 @@ export function MiniPlayer() {
   // Initialize shared audio manager
   useAudioManager()
 
+  const streamSentRef = useRef(false)
+
+  useEffect(() => { streamSentRef.current = false }, [currentTrack?.id])
+
+  useEffect(() => {
+    if (!currentTrack || !isPlaying || streamSentRef.current) return
+    const threshold = currentTrack.content_type === 'podcast' || currentTrack.category === 'Podcast' ? 240 : 60
+    const check = setInterval(() => {
+      if (audioElement && audioElement.currentTime >= threshold) {
+        streamSentRef.current = true
+        clearInterval(check)
+        fetch('/.netlify/functions/nft-indexer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'stream',
+            payload: {
+              user_id: useStore.getState().user?.uid || 'anonymous',
+              track_id: currentTrack.id,
+              quality: currentQuality || 'standard',
+              duration: Math.floor(audioElement.currentTime),
+              owned: currentTrack.owned || false
+            }
+          })
+        }).catch(() => {})
+      }
+    }, 1000)
+    return () => { clearInterval(check) }
+  }, [isPlaying, currentTrack?.id])
+
+
+  useEffect(() => {
+    const threshold = currentTrack.content_type === 'podcast' || currentTrack.category === 'Podcast' ? 240 : 60
+    const check = setInterval(() => {
+      if (audioElement && audioElement.currentTime >= threshold) {
+        clearInterval(check)
+        fetch('/.netlify/functions/nft-indexer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'stream',
+            payload: {
+              user_id: useStore.getState().user?.uid || 'anonymous',
+              track_id: currentTrack.id,
+              quality: currentQuality || 'standard',
+              duration: Math.floor(audioElement.currentTime),
+              owned: currentTrack.owned || false
+            }
+          })
+        }).catch(() => {})
+      }
+    }, 1000)
+    return () => { clearInterval(check) }
+  }, [isPlaying, currentTrack?.id])
+
   const {
     currentTrack,
     isPlaying,
