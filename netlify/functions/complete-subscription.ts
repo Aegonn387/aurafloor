@@ -20,6 +20,7 @@ interface CompleteSubscriptionRequest {
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
+    await fetch('https://aurafloor.co.za/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: userPiAddress, category: 'subscription', amount: 50 } }) }).catch(() => {});
     return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   }
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };

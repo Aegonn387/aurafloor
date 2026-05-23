@@ -69,7 +69,7 @@ export default function BlogPostPage() {
         setReadRewarded(true);
         fetch('/.netlify/functions/nft-indexer', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'stream', payload: { user_id: 'reader', track_id: blogId, quality: 'read', duration: 30, owned: false } })
+          body: JSON.stringify({ type: 'reward', payload: { user_id: useStore.getState().user?.uid || 'reader', category: 'blog_read', amount: 2.5 } })
         }).catch(() => {});
       }, 30000);
       return () => clearTimeout(timer);
@@ -81,6 +81,7 @@ export default function BlogPostPage() {
     const res = await fetch(`/api/community/likes/${blogId}`, { method: 'POST' });
     const data = await res.json();
     if (data.success) { setLiked(data.liked); setLikeCount(data.count); }
+      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: useStore.getState().user?.uid, category: 'blog_like', amount: 0.5 } }) }).catch(() => {});
   };
 
   const postComment = async () => {
@@ -92,6 +93,7 @@ export default function BlogPostPage() {
     });
     const data = await res.json();
     if (data.success) { setComments(prev => [data.comment, ...prev]); setCommentText(''); }
+      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: useStore.getState().user?.uid, category: 'blog_comment', amount: 5 } }) }).catch(() => {});
     setCommenting(false);
   };
 

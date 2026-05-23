@@ -15,6 +15,9 @@ export const handler: Handler = async (event) => {
     if (!type) return { statusCode: 400, body: 'Missing event type' }
 
     switch (type) {
+      case 'reward':
+        await handleReward(payload);
+        break;
       case 'mint':
         await handleMint(payload)
         break
@@ -41,6 +44,12 @@ export const handler: Handler = async (event) => {
 }
 
 async function handleMint(p: any) {
+async function handleReward(p: any) {
+  const { user_id, category, amount } = p;
+  if (!user_id || !category) return;
+  await sql`INSERT INTO stream_events (user_id, track_id, quality, duration, owned, timestamp) VALUES (${user_id}, ${'reward_' + category}, ${'reward'}, ${amount || 0}, false, NOW())`;
+}
+
   const { user_pi_address, token_id, month_year, metadata } = p
   if (!user_pi_address || !token_id) throw new Error('Missing mint fields')
   await sql`

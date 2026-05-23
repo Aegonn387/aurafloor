@@ -318,7 +318,7 @@ export default function CreatorDashboard() {
                   <p className="text-sm text-muted-foreground">{analytics?.ad_revenue?.periods_paid || 0} payout periods</p>
                   {subscription?.tier === 'free' && (
                     <div className="mt-4 p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground">Free creators earn 40% of ad revenue</p>
+                      <p className="text-xs text-muted-foreground">50% of ad revenue goes to the Creator Pool, distributed weekly based on your share of impressions</p>
                     </div>
                   )}
                 </CardContent>

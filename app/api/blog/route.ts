@@ -67,6 +67,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'publish') {
+      // Placeholder: Verify 100 AURA stake (will call AURA token contract once deployed)
+      // TODO: Replace with actual on-chain stake check after AURA contract is live
       if (!content) return NextResponse.json({ success: false, error: 'Content required to publish' }, { status: 400 });
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const result = await queryWithRetry(() => sql`

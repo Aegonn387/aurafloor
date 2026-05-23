@@ -65,6 +65,7 @@ export function Footer() {
               <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               <li><Link href="/copyright" className="hover:text-foreground transition-colors">Copyright Policy</Link></li>
               <li><Link href="/fees" className="hover:text-foreground transition-colors">Fee Structure</Link></li>
+              <li><Link href="/whitepaper" className="hover:text-foreground transition-colors">Whitepaper</Link></li>
               <li><Link href="/rewards" className="hover:text-foreground transition-colors">AURA Rewards</Link></li>
             </ul>
           </div>
