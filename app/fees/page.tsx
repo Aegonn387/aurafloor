@@ -186,6 +186,16 @@ export default function FeesPage() {
 
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
+          <section className="space-y-2">
+            <h2 className="font-semibold text-base sm:text-lg">9. AURA Token Rewards</h2>
+            <p className="text-muted-foreground">AURA tokens are earned through meaningful platform participation. All rewards follow daily caps and anti‑sybil measures. See the <Link href="/rewards" className="text-primary hover:underline">Rewards Hub</Link> for full details.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Approved Blog Post</p><p className="text-xs text-muted-foreground mt-2">Stake 100 AURA required</p></div>
+              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">10 AURA</p><p className="text-sm font-medium">Per Stream / Ad Watch</p><p className="text-xs text-muted-foreground mt-2">Daily caps apply</p></div>
+              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Correct Moderation Vote</p><p className="text-xs text-muted-foreground mt-2">Speed bonus up to +15%</p></div>
+              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Verified User Invited</p><p className="text-xs text-muted-foreground mt-2">Unlimited</p></div>
+            </div>
+          </section>
                   This Fee Structure is part of and governed by the Aurafloor <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>. All terms are subject to change with notice; your continued use constitutes acceptance.
                 </p>
               </div>

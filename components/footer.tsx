@@ -53,6 +53,7 @@ export function Footer() {
               <li><Link href="/help" className="hover:text-foreground transition-colors">Help Center</Link></li>
               <li><Link href="/apply" className="hover:text-foreground transition-colors">Apply as Creator</Link></li>
               <li><Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
+              <li><Link href="/settings" className="hover:text-foreground transition-colors">Settings</Link></li>
             </ul>
           </div>
 
@@ -64,6 +65,7 @@ export function Footer() {
               <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               <li><Link href="/copyright" className="hover:text-foreground transition-colors">Copyright Policy</Link></li>
               <li><Link href="/fees" className="hover:text-foreground transition-colors">Fee Structure</Link></li>
+              <li><Link href="/rewards" className="hover:text-foreground transition-colors">AURA Rewards</Link></li>
             </ul>
           </div>
         </div>

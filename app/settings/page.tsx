@@ -443,6 +443,14 @@ export default function SettingsPage() {
                       { title: "Privacy Policy", href: "/privacy", description: "How we handle your data" },
                       { title: "Copyright Policy", href: "/copyright", description: "IP rights and takedowns" },
                       { title: "Fee Structure", href: "/fees", description: "Transparent fee breakdown" }
+                      <Button variant="outline" className="justify-start h-auto py-3 text-left" asChild>
+                        <Link href="/rewards">
+                          <div>
+                            <p className="font-medium text-sm">AURA Rewards</p>
+                            <p className="text-xs text-muted-foreground">Earn tokens for participation</p>
+                          </div>
+                        </Link>
+                      </Button>
                     ].map((resource, index) => (
                       <Button key={index} variant="outline" className="justify-start h-auto py-3 text-left" asChild>
                         <Link href={resource.href}>
