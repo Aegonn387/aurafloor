@@ -36,7 +36,7 @@
       "dao_stake_min": 100,
       "writer_stake_min": 100,
       "lockup_periods": ["1 year", "2 years", "3 years"],
-      "yield_source": "swap_fees"
+      "yield_source": "development_wallet"
     }
   },
   "tokenomics": {

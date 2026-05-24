@@ -13,8 +13,8 @@ Aurafloor is a decentralized content ecosystem built on the Pi Network, designed
 The platform enables creators to mint audio NFTs, publish written content, and engage with audiences without intermediaries. Collectors and community members earn AURA tokens through meaningful engagement: streaming, content discovery, curation, writing, moderation, and participation in governance.
 
 The AURA token (total supply: 1,000,000,000) serves as the economic backbone of the ecosystem. Emissions follow a predictable yearly halving schedule, ensuring long‑term sustainability. AURA rewards are distributed across a comprehensive set of on‑chain activities, creating a continuous cycle of creation, engagement, and value accrual.
-A key innovation is the platform’s comprehensive fee architecture, which includes swap fees for Pi‑AURA exchanges, minting fees, marketplace fees, and ad revenue splits. All swap fees are initially directed entirely to a DAO staking yield pool, providing a sustainable source of passive income for long‑term token holders. Other fees (minting, marketplace, subscriptions, tipping) are directed to treasury wallets during the initial phase to fund development and operations.
-Governance is designed to transition progressively from the founding team to the community, with full DAO control anticipated in the later stage of operations. The founding team maintains operational authority during the initial phase to ensure stability, rapid iteration, and successful execution of the development roadmap.
+A key innovation is the platform’s comprehensive fee architecture, which includes swap fees for Pi‑AURA exchanges, minting fees, marketplace fees, and ad revenue splits. All swap fees are directed to a development wallet to fund platform operations and growth. A DAO staking mechanism will be introduced at a later phase. Other fees (minting, marketplace, subscriptions, tipping) are directed to treasury wallets during the initial phase to fund development and operations.
+Governance is designed to transition progressively from the founding team to the community, with DAO formation to be discussed and determined at a later stage. The founding team maintains operational authority during the initial phase to ensure stability, rapid iteration, and successful execution of the development roadmap.
 
 The Pi Ads integration provides a sustainable onboarding channel for free users, while subscription tiers offer enhanced experiences for creators and collectors.
 
@@ -48,7 +48,7 @@ Core modules include:
 - **Subscriptions** – Tiered access for creators and collectors
 - **Pi Ads Integration** – Interstitial, rewarded, and banner ads for free‑tier users
 - **Pi‑AURA Swap Pool** – Decentralized exchange between Pi and AURA with transparent fee structure
-- **DAO Staking** – Lock AURA for governance and earn yield from swap fees
+- **DAO Staking** – Lock AURA for governance (coming at a later phase)
 - **Moderation Bond** – Lock AURA to become a moderator and earn per‑vote rewards
 
 ---
@@ -78,7 +78,7 @@ Core modules include:
 
 First halving occurs January 1, 2027.
 **Supply Reduction Mechanisms:**
-- Lockups: Moderation bond (500 AURA), DAO staking (1‑3 year locks)
+- Lockups: Moderation bond (500 AURA), DAO staking (available at a later phase)
 - Burns: Promotion (100% of AURA burned), Subscription payments made in AURA (20% burned)
 
 ---
@@ -97,8 +97,8 @@ First halving occurs January 1, 2027.
 - Initial AURA in Pool: 50,000,000 AURA
 - Initial Pi in Pool: 200,000‑500,000 Pi (from Launchpad)
 - Swap Fee: 0.3% of transaction amount
-- Fee Destination (Years 1‑2): 100% to DAO Staking Yield Pool
-- DAO Control (Year 3+): May vote to redirect fees to buy‑and‑burn or other purposes
+- Fee Destination: 100% to Development Wallet
+- DAO governance will be discussed and formed at a later stage
 
 ---
 
@@ -106,7 +106,7 @@ First halving occurs January 1, 2027.
 
 **Moderation Bond:** 50 AURA at launch → 100 AURA (month 1) → 250 AURA (month 3) → 500 AURA (month 6+). Earns per‑vote rewards (25 AURA + speed bonus up to +15%).
 
-**DAO Staking:** Minimum 100 AURA. Lockup periods: 1 year (1.0×), 2 years (1.5×), 3 years (2.0×). Yield from swap fees distributed weekly.
+**DAO Staking:** Lock AURA for governance (available at a later phase).
 
 ---
 

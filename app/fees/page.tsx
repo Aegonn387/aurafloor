@@ -101,13 +101,13 @@ export default function FeesPage() {
                 </p>
                 <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">0.5%</p>
+                    <p className="text-2xl font-bold text-primary">1%</p>
                     <p className="text-sm font-medium">Platform Tip Fee</p>
                     <p className="text-xs text-muted-foreground mt-2">+ Stellar Network Fee (~0.00001 XLM)</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A 0.5% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure. This fee structure is subject to review and may be adjusted in the future. All adjustments will be communicated transparently.
+                  A 1% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure. This fee structure is subject to review and may be adjusted in the future. All adjustments will be communicated transparently.
                 </p>
               </section>
 
@@ -159,18 +159,22 @@ export default function FeesPage() {
                 </p>
                 <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">40%</p>
+                    <p className="text-2xl font-bold text-green-600">50%</p>
                     <p className="text-sm font-medium">Ad Revenue Share</p>
                     <p className="text-xs text-muted-foreground mt-2">Of net Pi Ads revenue from their content streams</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Free Creators receive <strong>40% of the net revenue</strong> that Aurafloor earns from Pi Ads served during streams of their audio content. Revenue share is calculated by the platform based on aggregated advertising performance metrics and paid out according to platform schedules. Amounts may vary with advertising market conditions.
+                  Free Creators receive <strong>50% of net Pi Ads revenue (50% Treasury / 50% Creator Pool)</strong> that Aurafloor earns from Pi Ads served during streams of their audio content. Revenue share is calculated by the platform based on aggregated advertising performance metrics and paid out according to platform schedules. Amounts may vary with advertising market conditions.
                 </p>
               </section>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">5. Network & Service Fees</h2>
+          <section className="space-y-2">
+            <h2 className="font-semibold text-base sm:text-lg">5. Pi‑AURA Swap Fee</h2>
+            <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto text-center"><div><p className="text-2xl font-bold text-primary">0.3%</p><p className="text-sm font-medium">Swap Fee</p><p className="text-xs text-muted-foreground mt-2">Applied to all Pi‑AURA trades. 100% directed to the Development Wallet. A DAO staking pool will be introduced at a later phase.</p></div></div>
+          </section>
+                <h2 className="font-semibold text-base sm:text-lg">6. Network & Service Fees</h2>
                 <div className="space-y-1 text-muted-foreground">
                   <p className="text-sm"><strong>Blockchain (Gas) Fees:</strong> Every on‑chain transaction requires payment of network fees to the Pi/Stellar Network. These fees vary and are non‑refundable.</p>
                   <p className="text-sm"><strong>No Hidden Fees:</strong> Apart from the fees listed above, Aurafloor charges no additional fees for standard platform use.</p>
@@ -178,7 +182,7 @@ export default function FeesPage() {
               </section>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">6. Taxes</h2>
+                <h2 className="font-semibold text-base sm:text-lg">7. Taxes</h2>
                 <p className="text-muted-foreground">
                   You are solely responsible for determining, reporting, and paying any taxes applicable to your transactions on the platform. Aurafloor does not withhold or remit taxes on your behalf.
                 </p>
