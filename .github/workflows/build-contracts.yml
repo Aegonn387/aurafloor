@@ -1,0 +1,53 @@
+name: Build Soroban Contracts
+
+on:
+  push:
+    branches: [ pi-integration ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      
+      - name: Install Soroban CLI
+        run: cargo install soroban-cli
+      
+      - name: Build AURA Token
+        run: |
+          cd soroban/aura-token
+          soroban contract build
+      
+      - name: Build Subscription Contract
+        run: |
+          cd soroban/subscription-contract
+          soroban contract build
+      
+      - name: Build Marketplace Contract
+        run: |
+          cd soroban/marketplace-contract
+          soroban contract build
+      
+      - name: Upload AURA Token WASM
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-token-wasm
+          path: soroban/aura-token/target/wasm32-unknown-unknown/release/*.wasm
+      
+      - name: Upload Subscription WASM
+        uses: actions/upload-artifact@v4
+        with:
+          name: subscription-contract-wasm
+          path: soroban/subscription-contract/target/wasm32-unknown-unknown/release/*.wasm
+      
+      - name: Upload Marketplace WASM
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-contract-wasm
+          path: soroban/marketplace-contract/target/wasm32-unknown-unknown/release/*.wasm
