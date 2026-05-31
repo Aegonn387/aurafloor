@@ -8,10 +8,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: stellar/quickstart:soroban-dev
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Download soroban-cli binary
+        run: |
+          curl -L https://github.com/stellar/soroban-cli/releases/download/v22.0.0/soroban-cli-22.0.0-x86_64-unknown-linux-gnu.tar.gz -o soroban.tar.gz
+          tar -xzf soroban.tar.gz
+          chmod +x soroban
+          sudo mv soroban /usr/local/bin/
       
       - name: Build AURA Token
         run: |
