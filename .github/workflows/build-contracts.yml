@@ -8,20 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: stellar/quickstart:soroban-dev
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Add wasm target
-        run: rustup target add wasm32-unknown-unknown
-      
-      - name: Install system dependencies
-        run: sudo apt update && sudo apt install -y libdbus-1-dev pkg-config
-      
-      - name: Install latest Soroban CLI
-        run: cargo install soroban-cli
       
       - name: Build AURA Token
         run: |
