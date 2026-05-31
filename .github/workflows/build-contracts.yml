@@ -8,38 +8,44 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: stellar/quickstart:soroban-dev
     steps:
       - uses: actions/checkout@v4
-
+      
+      - name: Install Rust with wasm target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      
+      - name: Install soroban-cli (core only, no dbus/hidapi)
+        run: cargo install soroban-cli --no-default-features -F opt
+      
       - name: Build AURA Token
         run: |
           cd soroban/aura-token
-          /usr/local/bin/soroban contract build
-
+          soroban contract build
+      
       - name: Build Subscription Contract
         run: |
           cd soroban/subscription-contract
-          /usr/local/bin/soroban contract build
-
+          soroban contract build
+      
       - name: Build Marketplace Contract
         run: |
           cd soroban/marketplace-contract
-          /usr/local/bin/soroban contract build
-
+          soroban contract build
+      
       - name: Upload AURA Token WASM
         uses: actions/upload-artifact@v4
         with:
           name: aura-token-wasm
           path: soroban/aura-token/target/wasm32-unknown-unknown/release/*.wasm
-
+      
       - name: Upload Subscription WASM
         uses: actions/upload-artifact@v4
         with:
           name: subscription-contract-wasm
           path: soroban/subscription-contract/target/wasm32-unknown-unknown/release/*.wasm
-
+      
       - name: Upload Marketplace WASM
         uses: actions/upload-artifact@v4
         with:
