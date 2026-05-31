@@ -17,8 +17,8 @@ jobs:
       - name: Add wasm target
         run: rustup target add wasm32-unknown-unknown
       
-      - name: Install Soroban CLI
-        run: cargo install soroban-cli --version 22.0.0
+      - name: Install latest Soroban CLI
+        run: cargo install soroban-cli
       
       - name: Build AURA Token
         run: |
