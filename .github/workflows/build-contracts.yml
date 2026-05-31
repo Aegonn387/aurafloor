@@ -8,28 +8,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: stellar/quickstart:soroban-dev
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Soroban
-        uses: stellar/soroban-action@v1
-        with:
-          soroban-version: "22.0.0"
 
       - name: Build AURA Token
         run: |
           cd soroban/aura-token
-          soroban contract build
+          /usr/local/bin/soroban contract build
 
       - name: Build Subscription Contract
         run: |
           cd soroban/subscription-contract
-          soroban contract build
+          /usr/local/bin/soroban contract build
 
       - name: Build Marketplace Contract
         run: |
           cd soroban/marketplace-contract
-          soroban contract build
+          /usr/local/bin/soroban contract build
 
       - name: Upload AURA Token WASM
         uses: actions/upload-artifact@v4
