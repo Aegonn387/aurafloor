@@ -13,11 +13,12 @@ jobs:
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+      
+      - name: Add wasm target
+        run: rustup target add wasm32-unknown-unknown
       
       - name: Install Soroban CLI
-        run: cargo install soroban-cli
+        run: cargo install soroban-cli --version 22.0.0
       
       - name: Build AURA Token
         run: |
