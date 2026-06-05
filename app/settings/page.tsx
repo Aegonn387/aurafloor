@@ -30,7 +30,6 @@ export default function SettingsPage() {
   const [subscription, setSubscription] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  // Truncate wallet address
   const truncateAddress = (addr: string) => {
     if (!addr) return "";
     return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
@@ -41,29 +40,19 @@ export default function SettingsPage() {
       try {
         const response = await fetch(`/api/subscription/update?user_pi_address=${user.piaddr}`)
         const data = await response.json()
-        if (data.success) {
-          setSubscription(data.subscription)
-        }
-      } catch (error) {
-        console.error('Failed to fetch subscription:', error)
-      } finally {
-        setLoading(false)
-      }
+        if (data.success) setSubscription(data.subscription)
+      } catch (error) { console.error('Failed to fetch subscription:', error) }
+      finally { setLoading(false) }
     }
     fetchSubscription()
   }, [user])
 
   const handleCancelSubscription = async () => {
     setIsCancelling(true)
-    // TODO: Implement actual cancellation API
-    setTimeout(() => {
-      setIsCancelling(false)
-      setCancelDialogOpen(false)
-    }, 1500)
+    setTimeout(() => { setIsCancelling(false); setCancelDialogOpen(false) }, 1500)
   }
 
   const handleDataExport = async () => {
-    // Placeholder: trigger a data export
     alert("Data export feature coming soon. You will receive an email with your data.")
   }
 
@@ -443,14 +432,6 @@ export default function SettingsPage() {
                       { title: "Privacy Policy", href: "/privacy", description: "How we handle your data" },
                       { title: "Copyright Policy", href: "/copyright", description: "IP rights and takedowns" },
                       { title: "Fee Structure", href: "/fees", description: "Transparent fee breakdown" }
-                      <Button variant="outline" className="justify-start h-auto py-3 text-left" asChild>
-                        <Link href="/rewards">
-                          <div>
-                            <p className="font-medium text-sm">AURA Rewards</p>
-                            <p className="text-xs text-muted-foreground">Earn tokens for participation</p>
-                          </div>
-                        </Link>
-                      </Button>
                     ].map((resource, index) => (
                       <Button key={index} variant="outline" className="justify-start h-auto py-3 text-left" asChild>
                         <Link href={resource.href}>
@@ -461,12 +442,40 @@ export default function SettingsPage() {
                         </Link>
                       </Button>
                     ))}
+                    <Button variant="outline" className="justify-start h-auto py-3 text-left" asChild>
+                      <Link href="/rewards">
+                        <div>
+                          <p className="font-medium text-sm">AURA Rewards</p>
+                          <p className="text-xs text-muted-foreground">Earn tokens for participation</p>
+                        </div>
+                      </Link>
+                    </Button>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
                   <h4 className="font-medium text-sm sm:text-base mb-3">About Aurafloor</h4>
                   <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-xs sm:text-sm text-muted-foreground">Version</span>
+                      <span className="text-xs sm:text-sm font-medium">0.1.0</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs sm:text-sm text-muted-foreground">Last Updated</span>
+                      <span className="text-xs sm:text-sm font-medium">Feb 2026</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+      <MobileNav />
+    </div>
+  )
+}
+sName="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-xs sm:text-sm text-muted-foreground">Version</span>
                       <span className="text-xs sm:text-sm font-medium">0.1.0</span>
