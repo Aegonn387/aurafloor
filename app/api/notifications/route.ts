@@ -1,4 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
+
+import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 
 async function getUserFromRequest(request: NextRequest): Promise<string | null> {
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
         ${title},
         ${message},
         ${amount || null},
-        ${currency || 'π'},
+        ${currency || 'p'},
         ${metadata ? JSON.stringify(metadata) : null},
         true
       )

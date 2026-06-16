@@ -475,23 +475,3 @@ export default function SettingsPage() {
     </div>
   )
 }
-sName="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs sm:text-sm text-muted-foreground">Version</span>
-                      <span className="text-xs sm:text-sm font-medium">0.1.0</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-xs sm:text-sm text-muted-foreground">Last Updated</span>
-                      <span className="text-xs sm:text-sm font-medium">Feb 2026</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-      <MobileNav />
-    </div>
-  )
-}

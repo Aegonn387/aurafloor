@@ -1,4 +1,6 @@
-﻿// app/api/inngest/route.ts
+export const dynamic = 'force-dynamic'
+
+// app/api/inngest/route.ts
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest";
 import { homepageAggregator } from "@/lib/services/homepage-aggregator";
@@ -11,7 +13,7 @@ const updateHomepageCache = inngest.createFunction(
   },
   { cron: "*/15 * * * *" }, // Runs every 15 minutes
   async ({ step }) => {
-    console.log("🔄 Inngest job triggered: update-homepage-cache");
+    console.log("?? Inngest job triggered: update-homepage-cache");
     
     await step.run("update-cache", async () => {
       await homepageAggregator.updateHomepageCache();

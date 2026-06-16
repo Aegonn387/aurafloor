@@ -36,13 +36,40 @@ import {
 export function FullPlayer() {
   useAudioManager()
 
+  const {
+    currentTrack,
+    isPlaying,
+    setIsPlaying,
+    setIsMiniPlayer,
+    isMiniPlayer,
+    setCurrentTrack,
+    audioElement,
+    currentQuality,
+    queue,
+    progress,
+    streamStatus,
+    error,
+    setError,
+    volume,
+    setVolume,
+    isMuted,
+    setIsMuted,
+    repeat,
+    setRepeat,
+    shuffle,
+    setShuffle,
+    showInfo,
+    setShowInfo,
+    isLiked,
+    toggleLike,
+  } = useStore()
   const streamSentRef = useRef(false)
 
   useEffect(() => { streamSentRef.current = false }, [currentTrack?.id])
 
   useEffect(() => {
     if (!currentTrack || !isPlaying || streamSentRef.current) return
-    const threshold = currentTrack.content_type === 'podcast' || currentTrack.category === 'Podcast' ? 240 : 60
+    const threshold = (currentTrack.category === 'Podcast' || currentTrack.category?.toLowerCase() === 'podcast') ? 240 : 60
     const check = setInterval(() => {
       if (audioElement && audioElement.currentTime >= threshold) {
         streamSentRef.current = true
@@ -73,33 +100,6 @@ export function FullPlayer() {
     setMounted(true)
   }, [])
 
-  const {
-    currentTrack,
-    isPlaying,
-    setIsPlaying,
-    setIsMiniPlayer,
-    isMiniPlayer,
-    setCurrentTrack,
-    audioElement,
-    currentQuality,
-    queue,
-    progress,
-    streamStatus,
-    error,
-    setError,
-    volume,
-    setVolume,
-    isMuted,
-    setIsMuted,
-    repeat,
-    setRepeat,
-    shuffle,
-    setShuffle,
-    showInfo,
-    setShowInfo,
-    isLiked,
-    toggleLike,
-  } = useStore()
 
   const [tipModalOpen, setTipModalOpen] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
@@ -181,7 +181,7 @@ export function FullPlayer() {
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${
       isDark
-        ? 'bg-gradient-to-b from-gray-900 to-black' 
+        ? 'bg-gradient-to-b from-gray-900 to-black'
         : 'bg-gradient-to-b from-gray-50 to-white'
     }`}>
       <div className={`flex items-center justify-between p-6 border-b ${
@@ -319,7 +319,7 @@ export function FullPlayer() {
               onClick={handlePlayPause}
               className={`w-16 h-16 rounded-full ${
                 isDark
-                  ? 'bg-white hover:bg-gray-200 text-black' 
+                  ? 'bg-white hover:bg-gray-200 text-black'
                   : 'bg-gray-900 hover:bg-gray-800 text-white'
               }`}
               disabled={streamStatus === "loading" || streamStatus === "error"}

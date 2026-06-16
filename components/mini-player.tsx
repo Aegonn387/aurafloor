@@ -1,133 +1,76 @@
-﻿"use client"
+"use client"
 
+import { useEffect, useRef } from "react"
 import { useStore } from "@/lib/store"
 import { useAudioManager } from "@/hooks/use-audio-manager"
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Maximize2,
-  X,
-  Volume2,
-  ListMusic,
-  Loader2,
-  AlertCircle,
-  VolumeX,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Expand } from "lucide-react"
 
 export function MiniPlayer() {
-  // Initialize shared audio manager
   useAudioManager()
-
-  const streamSentRef = useRef(false)
-
-  useEffect(() => { streamSentRef.current = false }, [currentTrack?.id])
-
-  useEffect(() => {
-    if (!currentTrack || !isPlaying || streamSentRef.current) return
-    const threshold = currentTrack.content_type === 'podcast' || currentTrack.category === 'Podcast' ? 240 : 60
-    const check = setInterval(() => {
-      if (audioElement && audioElement.currentTime >= threshold) {
-        streamSentRef.current = true
-        clearInterval(check)
-        fetch('/.netlify/functions/nft-indexer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'stream',
-            payload: {
-              user_id: useStore.getState().user?.uid || 'anonymous',
-              track_id: currentTrack.id,
-              quality: currentQuality || 'standard',
-              duration: Math.floor(audioElement.currentTime),
-              owned: currentTrack.owned || false
-            }
-          })
-        }).catch(() => {})
-      }
-    }, 1000)
-    return () => { clearInterval(check) }
-  }, [isPlaying, currentTrack?.id])
-
-
-  useEffect(() => {
-    const threshold = currentTrack.content_type === 'podcast' || currentTrack.category === 'Podcast' ? 240 : 60
-    const check = setInterval(() => {
-      if (audioElement && audioElement.currentTime >= threshold) {
-        clearInterval(check)
-        fetch('/.netlify/functions/nft-indexer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'stream',
-            payload: {
-              user_id: useStore.getState().user?.uid || 'anonymous',
-              track_id: currentTrack.id,
-              quality: currentQuality || 'standard',
-              duration: Math.floor(audioElement.currentTime),
-              owned: currentTrack.owned || false
-            }
-          })
-        }).catch(() => {})
-      }
-    }, 1000)
-    return () => { clearInterval(check) }
-  }, [isPlaying, currentTrack?.id])
 
   const {
     currentTrack,
     isPlaying,
     setIsPlaying,
     setIsMiniPlayer,
-    setCurrentTrack,
-    currentQuality,
     audioElement,
-    queue,
-    setQueue,
     progress,
     streamStatus,
-    error,
     volume,
     setVolume,
     isMuted,
     setIsMuted,
   } = useStore()
 
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false)
-  const [previousVolume, setPreviousVolume] = useState(80)
+  const streamSentRef = useRef(false)
 
-  const handleNext = () => {
-    if (queue.length > 0) {
-      const nextTrack = queue[0]
-      setCurrentTrack(nextTrack)
-      setQueue(queue.slice(1))
-    }
-  }
+  useEffect(() => {
+    streamSentRef.current = false
+  }, [currentTrack?.id])
 
-  const handlePrevious = () => {
-    if (audioElement && audioElement.currentTime > 3) {
-      audioElement.currentTime = 0
-    }
-  }
-
-  const toggleMute = () => {
-    if (isMuted) {
-      setIsMuted(false)
-      setVolume(previousVolume)
-    } else {
-      setPreviousVolume(volume)
-      setIsMuted(true)
-    }
-  }
+  useEffect(() => {
+    if (!currentTrack || !isPlaying || streamSentRef.current) return
+    const threshold = currentTrack.category === "Podcast" ? 240 : 60
+    const check = setInterval(() => {
+      if (audioElement && audioElement.currentTime >= threshold) {
+        streamSentRef.current = true
+        clearInterval(check)
+        fetch("/.netlify/functions/nft-indexer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "stream",
+            payload: {
+              user_id: useStore.getState().user?.uid || "anonymous",
+              track_id: currentTrack.id,
+              quality: "standard",
+              duration: Math.floor(audioElement.currentTime),
+              owned: currentTrack.owned || false,
+            },
+          }),
+        }).catch(() => {})
+      }
+    }, 1000)
+    return () => clearInterval(check)
+  }, [isPlaying, currentTrack?.id])
 
   if (!currentTrack) return null
 
-  const formatTime = (seconds: number) => {
+  const handlePlayPause = () => setIsPlaying(!isPlaying)
+  const handleSeek = (value: number[]) => {
+    if (audioElement && !isNaN(audioElement.duration)) {
+      audioElement.currentTime = (value[0] / 100) * audioElement.duration
+    }
+  }
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0])
+    if (value[0] > 0) setIsMuted(false)
+  }
+  const handleToggleMute = () => setIsMuted(!isMuted)
+
+  const formatTime = (seconds: number): string => {
     if (!seconds || isNaN(seconds)) return "0:00"
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
@@ -135,239 +78,79 @@ export function MiniPlayer() {
   }
 
   const currentTime = audioElement?.currentTime || 0
-  const duration = audioElement?.duration || currentTrack.duration
+  const duration = audioElement?.duration || currentTrack.duration || 0
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border z-30 pb-safe">
-      <Slider
-        value={[progress]}
-        onValueChange={(value) => {
-          if (audioElement && duration) {
-            audioElement.currentTime = (value[0] / 100) * duration
-          }
-        }}
-        max={100}
-        step={0.1}
-        className="w-full h-1 cursor-pointer"
-        disabled={streamStatus !== "ready"}
-      />
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-lg">
+      <div className="flex items-center gap-3 p-2 md:p-3">
+        {/* Album art */}
+        <div className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden">
+          <img
+            src={currentTrack.coverUrl || "/placeholder.svg"}
+            alt={currentTrack.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
 
-      <div className="container px-3 py-2.5">
-        {error && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-red-500">
-            <AlertCircle className="w-3 h-3" />
-            <span>{error}</span>
+        {/* Track info + progress slider */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium truncate">{currentTrack.title}</p>
+            <p className="text-sm text-muted-foreground truncate hidden sm:block">
+              {currentTrack.artist}
+            </p>
           </div>
-        )}
-
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => setIsMiniPlayer(false)}
-            className="shrink-0 relative group"
-            aria-label="Expand player"
-            disabled={streamStatus === "loading"}
-          >
-            <img
-              src={currentTrack.coverUrl || "/placeholder.svg"}
-              alt={currentTrack.title}
-              className="w-12 h-12 rounded-lg object-cover shadow-md group-hover:scale-105 transition-transform"
-            />
-            {streamStatus === "loading" && (
-              <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
-              </div>
-            )}
-            {streamStatus === "buffering" && (
-              <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
-                <Loader2 className="w-3 h-3 text-white animate-spin" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center">
-              <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{currentTrack.title}</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="truncate">{currentTrack.artist}</span>
-              <span className="text-primary">•</span>
-              <span className="shrink-0">
-                {streamStatus === "loading"
-                  ? "Loading..."
-                  : streamStatus === "buffering"
-                    ? "Buffering..."
-                    : currentQuality || "HD"}
-              </span>
-
-              {currentTrack.edition && currentTrack.totalEditions && (
-                <>
-                  <span className="text-primary">•</span>
-                  <span className="shrink-0">
-                    #{currentTrack.edition}/{currentTrack.totalEditions}
-                  </span>
-                </>
-              )}
-
-              {!currentTrack.owned && (
-                <>
-                  <span className="text-primary">•</span>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                    Free
-                  </Badge>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 shrink-0"
-              onClick={handlePrevious}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{formatTime(currentTime)}</span>
+            <Slider
+              value={[progress]}
+              onValueChange={handleSeek}
+              max={100}
+              step={0.1}
+              className="w-32 md:w-48"
               disabled={streamStatus !== "ready"}
-            >
-              <SkipBack className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="default"
-              size="icon"
-              className="w-10 h-10 shrink-0"
-              onClick={() => setIsPlaying(!isPlaying)}
-              disabled={streamStatus === "loading" || streamStatus === "error"}
-            >
-              {streamStatus === "loading" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="w-5 h-5" />
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 shrink-0"
-              onClick={handleNext}
-              disabled={queue.length === 0 || streamStatus !== "ready"}
-            >
-              <SkipForward className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
-
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8"
-                onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-                onMouseEnter={() => setShowVolumeSlider(true)}
-                onMouseLeave={() => setTimeout(() => setShowVolumeSlider(false), 300)}
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </Button>
-
-              {showVolumeSlider && (
-                <div
-                  className="absolute bottom-full right-0 mb-2 p-3 bg-card border rounded-lg shadow-lg"
-                  onMouseEnter={() => setShowVolumeSlider(true)}
-                  onMouseLeave={() => setShowVolumeSlider(false)}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-6 h-6"
-                      onClick={toggleMute}
-                    >
-                      {isMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
-                    </Button>
-                    <Slider
-                      value={[isMuted ? 0 : volume]}
-                      onValueChange={(value) => {
-                        setVolume(value[0])
-                        if (value[0] > 0) setIsMuted(false)
-                      }}
-                      max={100}
-                      orientation="vertical"
-                      className="h-24"
-                    />
-                    <span className="text-xs text-muted-foreground">{isMuted ? 0 : volume}%</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 relative"
-              disabled={queue.length === 0}
-              title={queue.length > 0 ? `${queue.length} tracks in queue` : "No tracks in queue"}
-            >
-              <ListMusic className="w-4 h-4" />
-              {queue.length > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
-                  {queue.length}
-                </Badge>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => setIsMiniPlayer(false)}
-              aria-label="Expand player"
-              disabled={streamStatus === "loading"}
-            >
-              <Maximize2 className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => {
-                setCurrentTrack(null)
-                if (audioElement) {
-                  audioElement.pause()
-                  audioElement.src = ""
-                }
-              }}
-              aria-label="Close player"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Mobile-only close button */}
-          <div className="flex sm:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8"
-              onClick={() => {
-                setCurrentTrack(null)
-                if (audioElement) {
-                  audioElement.pause()
-                  audioElement.src = ""
-                }
-              }}
-              aria-label="Close player"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            />
+            <span>{formatTime(duration)}</span>
           </div>
         </div>
+
+        {/* Playback controls */}
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <SkipBack className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="default"
+            size="icon"
+            onClick={handlePlayPause}
+            className="h-8 w-8 rounded-full"
+            disabled={streamStatus === "loading"}
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <SkipForward className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Volume controls (hidden on mobile) */}
+        <div className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={handleToggleMute} className="h-8 w-8">
+            {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+          <Slider
+            value={[isMuted ? 0 : volume]}
+            onValueChange={handleVolumeChange}
+            max={100}
+            step={1}
+            className="w-24"
+          />
+        </div>
+
+        {/* Expand to full player */}
+        <Button variant="ghost" size="icon" onClick={() => setIsMiniPlayer(false)} className="h-8 w-8">
+          <Expand className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   )

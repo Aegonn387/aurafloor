@@ -2,7 +2,7 @@ import { create } from "zustand"
 import type { PiUser } from "./pi-auth"
 
 export interface ExtendedPiUser extends PiUser {
-  subscription?: "free" | "premium"
+  subscription?: { tier: string; plan?: string }
   // Add database fields from u table
   dname?: string
   piuser?: string

@@ -85,15 +85,13 @@ export default function ProfilePage() {
     reader.readAsDataURL(file)
   }
 
+  const { items: displayedNFTs, loading: loadingMore, hasMore, loadMoreRef } = useInfiniteScroll({ initialItems: allUserNFTs })
   const triggerFileInput = () => {
     fileInputRef.current?.click()
   }
 
   const tierConfig = subscription?.tier
-    ? getTierConfig(
-        (user?.role === 'creator' ? 'creator_' : 'collector_') +
-        (subscription.tier === 'free' ? 'free' : subscription.tier)
-      )
+    ? getTierConfig(((user?.role === 'creator' ? 'creator_' : 'collector_') + (subscription.tier === 'free' ? 'free' : subscription.tier)) as any)
     : undefined
 
   return (

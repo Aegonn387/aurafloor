@@ -49,7 +49,7 @@ export function AdBanner({ placement, className = "" }: AdBannerProps) {
   }, [])
 
   // Don't show ads for premium users
-  if (user?.subscription === "premium") return null
+  if (user?.subscription?.tier === "premium") return null
   if (!isVisible || !adContent) return null
 
   const bannerStyles = {

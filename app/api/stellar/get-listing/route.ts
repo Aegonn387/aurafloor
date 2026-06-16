@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { stellarIntegration } from '@/lib/blockchain/stellar-integration'
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3'

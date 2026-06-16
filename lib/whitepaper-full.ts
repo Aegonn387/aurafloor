@@ -179,4 +179,4 @@ Aurafloor invites creators, collectors, developers, and investors to join in bui
 **Contact:** Aegonn@aurafloor.co.za | **Website:** aurafloor.co.za | **Twitter:** @aura_place
 
 *This white paper is for informational purposes only and does not constitute financial advice. The AURA token is a utility token within the Aurafloor ecosystem. All information is subject to change as the platform evolves.*
-\`;
+`;

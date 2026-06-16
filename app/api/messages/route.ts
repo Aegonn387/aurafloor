@@ -1,4 +1,6 @@
-﻿// app/api/messages/route.ts
+export const dynamic = 'force-dynamic'
+
+// app/api/messages/route.ts
 // This is a placeholder API route for messages
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { homepageAggregator } from '@/lib/services/homepage-aggregator'
 import { homepageCache } from '@/lib/redis'

@@ -1,4 +1,6 @@
-﻿// app/api/ws/route.ts
+export const dynamic = 'force-dynamic'
+
+// app/api/ws/route.ts
 // WebSocket endpoint placeholder for real-time notifications
 
 import { NextRequest } from 'next/server'

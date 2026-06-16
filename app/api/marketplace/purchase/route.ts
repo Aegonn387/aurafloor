@@ -1,4 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic'
+
+import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
