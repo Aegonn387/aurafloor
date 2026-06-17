@@ -123,13 +123,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const scopes = ["username", "payments"];
       const authResult = await window.Pi.authenticate(scopes, handleIncompletePayment);
       console.log("[Auth] Success:", authResult);
-      const allowedTesters = ["GBJQZWOB4PFO3OTPSIV4ILIFJYNWTRZBCZZA3XOO2DHMHBH3QC3LAQ6L"];
-      if (!allowedTesters.includes(authResult.user.uid)) {
-        setSdkError("This app is currently in invite‑only testnet. Please contact the team for access.");
-        setLoading(false);
-        return;
-      }
-
+      
       const verifiedData = await verifyPiUser(authResult.accessToken);
       console.log("[Auth] User verified:", verifiedData.user);
 
