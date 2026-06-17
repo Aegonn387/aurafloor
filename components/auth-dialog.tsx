@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [sdkError, setSdkError] = useState<string | null>(null);
   const [storedAuth, setStoredAuth] = useState<{ accessToken: string; user: any } | null>(null);
   const [incompletePaymentError, setIncompletePaymentError] = useState<string | null>(null);
+  const [showDisclosure, setShowDisclosure] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -82,7 +83,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     }
   };
 
-  // Completes an incomplete payment via the backend – never silently ignore.
   const handleIncompletePayment = async (payment: any) => {
     console.log("[IncompletePayment] Found:", payment);
     setIncompletePaymentError(null);
@@ -98,10 +98,13 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         const errText = await res.text();
         throw new Error(`Backend ${res.status}: ${errText}`);
       }
-      console.log("[IncompletePayment] Completed via backend");
+      const result = await res.json();
+      console.log("[IncompletePayment] Completed via backend", result);
+      return result;
     } catch (err: any) {
       console.error("[IncompletePayment] Failed:", err);
       setIncompletePaymentError(`Payment completion failed: ${err.message}`);
+      throw err;
     }
   };
 
@@ -110,20 +113,25 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     setSdkError(null);
     setIncompletePaymentError(null);
 
+    setShowDisclosure(true);
+    setLoading(false);
+  };
+
+  const confirmDisclosure = async () => {
+    setShowDisclosure(false);
+    setLoading(true);
     try {
       if (!window.Pi) {
         throw new Error("Pi SDK not available. Please use Pi Browser.");
       }
-
       if (!piInitialized) {
         throw new Error("Pi SDK not initialized yet. Please wait.");
       }
-
       console.log("[Auth] Starting Pi authentication...");
       const scopes = ["username", "payments"];
       const authResult = await window.Pi.authenticate(scopes, handleIncompletePayment);
       console.log("[Auth] Success:", authResult);
-      
+
       const verifiedData = await verifyPiUser(authResult.accessToken);
       console.log("[Auth] User verified:", verifiedData.user);
 
@@ -184,6 +192,40 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 Connect with Pi Network to access the audio NFT marketplace
               </DialogDescription>
             </DialogHeader>
+
+            {showDisclosure && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div className="bg-background rounded-xl p-6 max-w-sm mx-4 border border-border shadow-lg">
+                  <h3 className="text-lg font-semibold mb-2">Data sharing notice</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    By connecting your Pi wallet, you agree to share your <strong>username</strong> and <strong>payment capability</strong> with Aurafloor.
+                    We use this only for:
+                  </p>
+                  <ul className="text-sm space-y-1 mb-4 list-disc list-inside text-muted-foreground">
+                    <li>Identifying your profile</li>
+                    <li>Processing NFT purchases and tips</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mb-4">We never store your private keys.</p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowDisclosure(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={confirmDisclosure}
+                      disabled={loading}
+                    >
+                      {loading ? "Loading..." : "I understand, continue"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 sm:gap-4 py-4 sm:py-6">
               <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/10 rounded-lg p-4 sm:p-6 text-center border border-primary/20">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
