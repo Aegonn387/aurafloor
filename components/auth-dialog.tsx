@@ -1,177 +1,205 @@
-﻿"use client";
+﻿"use client"
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useStore } from "@/lib/store";
-import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react";
-import { getPiInitOptions } from "@/lib/pi-config";
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { useStore } from "@/lib/store"
+import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react"
 
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"connect" | "role">("connect");
-  const setUser = useStore((state) => state.setUser);
-  const [piInitialized, setPiInitialized] = useState(false);
-  const [sdkError, setSdkError] = useState<string | null>(null);
-  const [storedAuth, setStoredAuth] = useState<{ accessToken: string; user: any } | null>(null);
-  const [incompletePaymentError, setIncompletePaymentError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<"connect" | "role">("connect")
+  const setUser = useStore((state) => state.setUser)
+  const [piInitialized, setPiInitialized] = useState(false)
+  const [sdkError, setSdkError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open) return;
-
-    const checkPiBrowser = async () => {
-      setSdkError(null);
-
-      if (typeof window === "undefined") return;
-
-      if (!window.Pi) {
-        setSdkError("Please open this app in Pi Browser to authenticate");
-        setPiInitialized(false);
-        return;
-      }
-
+    const initializePi = async () => {
       try {
-        const options = getPiInitOptions();
-        window.Pi.init(options);
-        setPiInitialized(true);
-        console.log("[Pi SDK] Initialized successfully");
-      } catch (error) {
-        console.error("[Pi SDK] Init error:", error);
-        setSdkError("Failed to initialize Pi SDK");
-        setPiInitialized(false);
-      }
-    };
+        setSdkError(null)
 
-    checkPiBrowser();
-  }, [open]);
+        if (typeof window !== "undefined" && window.Pi) {
+          console.log("[Pi SDK] Already loaded, initializing...")
+
+          try {
+            window.Pi.init({ 
+              version: "2.0", 
+              sandbox: process.env.NODE_ENV === "development" 
+            })
+            setPiInitialized(true)
+            console.log("[Pi SDK] Initialized successfully")
+          } catch (initError) {
+            console.error("[Pi SDK] Init error:", initError)
+            setPiInitialized(true)
+          }
+          return
+        }
+
+        console.log("[Pi SDK] Loading script...")
+        const script = document.createElement("script")
+        script.src = "https://sdk.minepi.com/pi-sdk.js"
+        script.async = true
+
+        script.onload = () => {
+          console.log("[Pi SDK] Script loaded, initializing...")
+
+          setTimeout(() => {
+            if (window.Pi) {
+              try {
+                window.Pi.init({ 
+                  version: "2.0", 
+                  sandbox: process.env.NODE_ENV === "development" 
+                })
+                setPiInitialized(true)
+                console.log("[Pi SDK] Initialized successfully")
+              } catch (initError) {
+                console.error("[Pi SDK] Init error:", initError)
+                setPiInitialized(true)
+              }
+            } else {
+              console.error("[Pi SDK] Pi object not available after script load")
+              setSdkError("Pi SDK loaded but not available. Please use Pi Browser.")
+            }
+          }, 100)
+        }
+
+        script.onerror = (error) => {
+          console.error("[Pi SDK] Failed to load script:", error)
+          setSdkError("Failed to load Pi SDK. Please check your connection.")
+        }
+
+        document.head.appendChild(script)
+      } catch (error) {
+        console.error("[Pi SDK] Initialization error:", error)
+        setSdkError("Error initializing Pi SDK")
+      }
+    }
+
+    if (open) {
+      initializePi()
+    }
+  }, [open])
 
   const verifyPiUser = async (accessToken: string) => {
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const baseUrl = isLocalhost ? "http://localhost:8888" : "";
-    const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`;
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    const baseUrl = isLocalhost ? "http://localhost:8888" : ""
+    const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`
 
-    console.log("[Verify] Calling:", functionUrl);
+    console.log("[Verify] Calling:", functionUrl)
+
     try {
       const verificationResponse = await fetch(functionUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
+          "Accept": "application/json"
         },
-        body: JSON.stringify({ accessToken }),
-      });
+        body: JSON.stringify({ accessToken })
+      })
 
-      console.log("[Verify] Status:", verificationResponse.status);
-      const responseText = await verificationResponse.text();
-      console.log("[Verify] Response:", responseText.substring(0, 200));
+      console.log("[Verify] Status:", verificationResponse.status)
+
+      const responseText = await verificationResponse.text()
+      console.log("[Verify] Response:", responseText.substring(0, 200))
 
       if (!verificationResponse.ok) {
-        console.error("[Verify] Error response:", responseText);
-        throw new Error(`Server error: ${verificationResponse.status}`);
+        console.error("[Verify] Error response:", responseText)
+        throw new Error(`Server error: ${verificationResponse.status}`)
       }
 
       try {
-        return JSON.parse(responseText);
+        return JSON.parse(responseText)
       } catch (parseError) {
-        console.error("[Verify] JSON parse failed:", parseError);
-        throw new Error("Invalid JSON response from server");
+        console.error("[Verify] JSON parse failed:", parseError)
+        throw new Error("Invalid JSON response from server")
       }
     } catch (error) {
-      console.error("[Verify] Fetch error:", error);
-      throw error;
+      console.error("[Verify] Fetch error:", error)
+      throw error
     }
-  };
-
-  const handleIncompletePayment = async (payment: any) => {
-    console.log("[IncompletePayment] Found:", payment);
-    setIncompletePaymentError(null);
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    const baseUrl = isLocalhost ? "http://localhost:8888" : "";
-    try {
-      const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Backend ${res.status}: ${errText}`);
-      }
-      const result = await res.json();
-      console.log("[IncompletePayment] Completed via backend", result);
-      return result;
-    } catch (err: any) {
-      console.error("[IncompletePayment] Failed:", err);
-      setIncompletePaymentError(`Payment completion failed: ${err.message}`);
-      throw err;
-    }
-  };
+  }
 
   const handleConnect = async () => {
-    setLoading(true);
-    setSdkError(null);
-    setIncompletePaymentError(null);
+    setLoading(true)
+    setSdkError(null)
 
     try {
       if (!window.Pi) {
-        throw new Error("Pi SDK not available. Please use Pi Browser.");
+        throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
 
       if (!piInitialized) {
-        throw new Error("Pi SDK not initialized yet. Please wait.");
+        throw new Error("Pi SDK not initialized yet. Please wait.")
       }
 
-      console.log("[Auth] Starting Pi authentication...");
-      const scopes = ["username", "payments"];
-      const authResult = await window.Pi.authenticate(scopes, handleIncompletePayment);
-      console.log("[Auth] Success:", authResult);
+      console.log("[Auth] Starting Pi authentication...")
 
-      const verifiedData = await verifyPiUser(authResult.accessToken);
-      console.log("[Auth] User verified:", verifiedData.user);
+      const scopes = ["username", "payments"]
+      const onIncompletePaymentFound = (payment: any) => {
+        console.log("[Auth] Incomplete payment found:", payment)
+      }
 
-      setStoredAuth({
-        accessToken: authResult.accessToken,
-        user: verifiedData.user,
-      });
+      const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
+      console.log("[Auth] Success:", authResult.user)
 
-      setStep("role");
+      const verifiedData = await verifyPiUser(authResult.accessToken)
+      console.log("[Auth] User verified:", verifiedData.user)
+
+      setStep("role")
     } catch (error: any) {
-      console.error("[Auth] Failed:", error);
-      const errorMessage = error.message || error.toString();
-      setSdkError(errorMessage);
-      alert(`Authentication failed: ${errorMessage}`);
+      console.error("[Auth] Failed:", error)
+      const errorMessage = error.message || error.toString()
+      setSdkError(errorMessage)
+      alert(`Authentication failed: ${errorMessage}`)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleRoleSelect = async (role: "creator" | "collector") => {
-    setLoading(true);
-    setSdkError(null);
+    setLoading(true)
+    setSdkError(null)
 
     try {
-      if (!storedAuth) {
-        throw new Error("Please connect your wallet first");
+      if (!window.Pi) {
+        throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
 
-      setUser({
-        ...storedAuth.user,
-        accessToken: storedAuth.accessToken,
-        role: role,
-      });
+      if (!piInitialized) {
+        throw new Error("Pi SDK not initialized yet. Please wait.")
+      }
 
-      setStoredAuth(null);
-      onOpenChange(false);
-      setTimeout(() => setStep("connect"), 300);
+      console.log("[Role] Authenticating for role:", role)
+
+      const scopes = ["username", "payments"]
+      const onIncompletePaymentFound = (payment: any) => {
+        console.log("[Role] Incomplete payment found:", payment)
+      }
+
+      const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
+      console.log("[Role] Auth success:", authResult.user)
+
+      const verifiedData = await verifyPiUser(authResult.accessToken)
+      console.log("[Role] User verified:", verifiedData.user)
+
+      setUser({
+        uid: verifiedData.user.uid,
+        username: verifiedData.user.username,
+        accessToken: authResult.accessToken,
+        role: role
+      })
+
+      onOpenChange(false)
+      setTimeout(() => setStep("connect"), 300)
     } catch (error: any) {
-      console.error("[Role] Failed:", error);
-      const errorMessage = error.message || error.toString();
-      setSdkError(errorMessage);
-      alert(`Role selection failed: ${errorMessage}`);
+      console.error("[Role] Failed:", error)
+      const errorMessage = error.message || error.toString()
+      setSdkError(errorMessage)
+      alert(`Role selection failed: ${errorMessage}`)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,7 +214,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 Connect with Pi Network to access the audio NFT marketplace
               </DialogDescription>
             </DialogHeader>
-
             <div className="flex flex-col gap-3 sm:gap-4 py-4 sm:py-6">
               <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-primary/10 rounded-lg p-4 sm:p-6 text-center border border-primary/20">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
@@ -197,12 +224,8 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 </p>
               </div>
 
-              <div
-                className={`rounded-lg p-2.5 sm:p-3 text-xs ${
-                  sdkError ? "bg-destructive/10 border border-destructive/20" : "bg-muted"
-                }`}
-              >
-                <p className={`text-center ${sdkError ? "text-destructive" : "text-muted-foreground"}`}>
+              <div className={`rounded-lg p-2.5 sm:p-3 text-xs ${sdkError ? 'bg-destructive/10 border border-destructive/20' : 'bg-muted'}`}>
+                <p className={`text-center ${sdkError ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {sdkError ? (
                     <span className="flex items-center justify-center gap-1.5 sm:gap-2">
                       <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -214,19 +237,10 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                       Pi SDK Ready
                     </span>
                   ) : (
-                    <span>Checking Pi Browser...</span>
+                    <span>Loading Pi SDK...</span>
                   )}
                 </p>
               </div>
-
-              {incompletePaymentError && (
-                <div className="rounded-lg p-2.5 sm:p-3 text-xs bg-destructive/10 border border-destructive/20">
-                  <p className="text-destructive text-center flex items-center justify-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {incompletePaymentError}
-                  </p>
-                </div>
-              )}
 
               <Button
                 onClick={handleConnect}
@@ -234,7 +248,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 size="lg"
                 className="w-full text-sm sm:text-base min-h-[44px]"
               >
-                {loading ? "Connecting..." : piInitialized ? "Connect Pi Wallet" : "Waiting for Pi Browser..."}
+                {loading ? "Connecting..." : piInitialized ? "Connect Pi Wallet" : "Initializing..."}
               </Button>
             </div>
           </>
@@ -251,8 +265,8 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             <div className="grid grid-cols-1 gap-3 sm:gap-4 py-4 sm:py-6">
               <button
                 onClick={() => handleRoleSelect("creator")}
-                disabled={loading || !storedAuth}
-                className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all p-4 sm:p-6 text-left hover:bg-primary/5 min-h-[100px] sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || !piInitialized}
+                className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-primary transition-all p-4 sm:p-6 text-left hover:bg-primary/5 min-h-[100px] sm:min-h-0"
               >
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
@@ -269,8 +283,8 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
               <button
                 onClick={() => handleRoleSelect("collector")}
-                disabled={loading || !storedAuth}
-                className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-accent transition-all p-4 sm:p-6 text-left hover:bg-accent/5 min-h-[100px] sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || !piInitialized}
+                className="group relative overflow-hidden rounded-lg border-2 border-border hover:border-accent transition-all p-4 sm:p-6 text-left hover:bg-accent/5 min-h-[100px] sm:min-h-0"
               >
                 <div className="flex items-start gap-3 sm:gap-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/10 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
@@ -289,5 +303,5 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }
