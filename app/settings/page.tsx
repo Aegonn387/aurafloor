@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Mail, Bell, Shield, CreditCard, User, Palette, Moon, Sun, Download, Lock, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react"
+import { Mail, Bell, Shield, CreditCard, User, Palette, Moon, Sun, Download, Lock, CheckCircle2, AlertCircle, ExternalLink, Copy } from "lucide-react"
 import { useStore } from "@/lib/store"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -32,17 +32,42 @@ export default function SettingsPage() {
 
   const truncateAddress = (addr: string) => {
     if (!addr) return "";
-    return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // You could add a toast here
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   useEffect(() => {
     async function fetchSubscription() {
-      if (!user?.piaddr) return
+      if (!user?.piaddr) {
+        // No address: assume free tier and stop loading
+        setSubscription({ tier: 'free', status: 'active' });
+        setLoading(false);
+        return;
+      }
       try {
         const response = await fetch(`/api/subscription/update?user_pi_address=${user.piaddr}`)
         const data = await response.json()
-        if (data.success) setSubscription(data.subscription)
-      } catch (error) { console.error('Failed to fetch subscription:', error) }
-      finally { setLoading(false) }
+        if (data.success && data.subscription) {
+          setSubscription(data.subscription)
+        } else {
+          // If no subscription found, default to free tier
+          setSubscription({ tier: 'free', status: 'active' })
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error)
+        // On error, default to free tier
+        setSubscription({ tier: 'free', status: 'active' })
+      } finally {
+        setLoading(false)
+      }
     }
     fetchSubscription()
   }, [user])
@@ -59,6 +84,10 @@ export default function SettingsPage() {
   const handleEmailSupport = () => {
     window.location.href = "mailto:aegon23@icloud.com?subject=Aurafloor%20Support%20Request";
   }
+
+  // Determine if subscription is paid
+  const isPaid = subscription && subscription.tier !== 'free';
+
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
@@ -88,7 +117,7 @@ export default function SettingsPage() {
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground">Loading subscription...</p>
                   </div>
-                ) : subscription ? (
+                ) : (
                   <>
                     <div className="p-4 border rounded-lg bg-gradient-to-r from-primary/5 to-accent/5">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
@@ -97,18 +126,20 @@ export default function SettingsPage() {
                             <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-base sm:text-lg">{subscription.plan_name || 'Free Tier'}</h3>
+                            <h3 className="font-semibold text-base sm:text-lg">
+                              {subscription?.plan_name || (subscription?.tier === 'free' ? 'Free Tier' : 'Premium Plan')}
+                            </h3>
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
-                              <Badge variant={subscription.status === "active" ? "default" : "secondary"} className="w-fit">
-                                {subscription.status || 'Active'}
+                              <Badge variant={subscription?.status === "active" ? "default" : "secondary"} className="w-fit">
+                                {subscription?.status || 'Active'}
                               </Badge>
                               <span className="text-xs sm:text-sm text-muted-foreground">
-                                {subscription.tier === 'free' ? 'Free' : `${subscription.price_pi || 0}Ï€ per month`}
+                                {isPaid ? `${subscription?.price_pi || 0} π per month` : 'Free'}
                               </span>
                             </div>
                           </div>
                         </div>
-                        {subscription.expires_at && (
+                        {subscription?.expires_at && isPaid && (
                           <div className="text-left sm:text-right">
                             <p className="text-xs sm:text-sm text-muted-foreground">Next billing</p>
                             <p className="font-semibold text-sm sm:text-base">{new Date(subscription.expires_at).toLocaleDateString()}</p>
@@ -121,32 +152,34 @@ export default function SettingsPage() {
                           <h4 className="font-medium text-sm">Subscription Details</h4>
                           <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Plan Fee</span>
-                              <span className="font-medium text-green-600">{subscription.commission_rate}%</span>
+                              <span className="text-muted-foreground">Platform Fee</span>
+                              <span className="font-medium text-green-600">{isPaid ? '5%' : '10%'}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Total Paid</span>
-                              <span>{subscription.total_paid || 0}Ï€</span>
-                            </div>
-                            {subscription.tier !== 'free' && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Payment Method</span>
-                                <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" />Pi Wallet</span>
-                              </div>
+                            {isPaid && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Total Paid</span>
+                                  <span>{subscription?.total_paid || 0} π</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Payment Method</span>
+                                  <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" />Pi Wallet</span>
+                                </div>
+                              </>
                             )}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <h4 className="font-medium text-sm">Plan Features</h4>
                           <div className="space-y-1">
-                            {subscription.tier === 'free' ? (
+                            {!isPaid ? (
                               <div className="text-sm text-muted-foreground">Upgrade to unlock premium features</div>
                             ) : (
                               <>
-                                {subscription.has_analytics && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Advanced Analytics</span></div>}
-                                {subscription.has_ad_free && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Ad-Free Experience</span></div>}
-                                {subscription.has_early_access && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Early Access</span></div>}
-                                {subscription.has_priority_support && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Priority Support</span></div>}
+                                {subscription?.has_analytics && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Advanced Analytics</span></div>}
+                                {subscription?.has_ad_free && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Ad-Free Experience</span></div>}
+                                {subscription?.has_early_access && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Early Access</span></div>}
+                                {subscription?.has_priority_support && <div className="flex items-center gap-2 text-sm"><CheckCircle2 className="w-3 h-3 text-green-500" /><span>Priority Support</span></div>}
                               </>
                             )}
                           </div>
@@ -155,9 +188,9 @@ export default function SettingsPage() {
 
                       <div className="flex flex-col sm:flex-row gap-3">
                         <Link href="/subscribe" className="flex-1">
-                          <Button className="w-full text-sm sm:text-base">{subscription.tier === 'free' ? 'Upgrade Now' : 'Change Plan'}</Button>
+                          <Button className="w-full text-sm sm:text-base">{isPaid ? 'Change Plan' : 'Upgrade Now'}</Button>
                         </Link>
-                        {subscription.tier !== 'free' && (
+                        {isPaid && (
                           <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                             <DialogTrigger asChild>
                               <Button variant="outline" className="flex-1 text-sm sm:text-base">Cancel Subscription</Button>
@@ -202,10 +235,6 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   </>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">Unable to load subscription</p>
-                  </div>
                 )}
               </CardContent>
             </Card>
@@ -232,6 +261,11 @@ export default function SettingsPage() {
                     <span className="font-medium text-sm sm:text-base font-mono">
                       {user?.piaddr ? truncateAddress(user.piaddr) : "Not connected"}
                     </span>
+                    {user?.piaddr && (
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => copyToClipboard(user.piaddr!)}>
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    )}
                     {user?.piaddr && (
                       <Badge variant="outline" className="ml-auto text-xs">Primary</Badge>
                     )}

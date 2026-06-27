@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, Crown, Upload, UserPlus, UserCheck } from "lucide-react"
+import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, Crown, Upload, UserPlus, UserCheck, Copy } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { NFTCard } from "@/components/nft-card"
 import { InlineWallet } from "@/components/inline-wallet"
@@ -44,7 +44,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchSubscription() {
-      if (!user?.piaddr) return
+      if (!user?.piaddr) {
+        setLoadingSub(false)
+        return
+      }
       try {
         const response = await fetch(`/api/subscription/update?user_pi_address=${user.piaddr}`)
         const data = await response.json()
@@ -90,9 +93,21 @@ export default function ProfilePage() {
     fileInputRef.current?.click()
   }
 
-  const tierConfig = subscription?.tier
-    ? getTierConfig(((user?.role === 'creator' ? 'creator_' : 'collector_') + (subscription.tier === 'free' ? 'free' : subscription.tier)) as any)
-    : undefined
+  // Determine subscription tier (default to free if not available)
+  const getTierKey = () => {
+    const rolePrefix = user?.role === 'creator' ? 'creator_' : 'collector_'
+    const tier = subscription?.tier || 'free'
+    return (rolePrefix + tier) as any
+  }
+  const tierConfig = getTierConfig(getTierKey())
+
+  // Copy wallet to clipboard
+  const copyWallet = async () => {
+    if (user?.piuser) {
+      await navigator.clipboard.writeText(user.piuser)
+      // You could add a toast here
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background pb-16 sm:pb-20">
@@ -114,7 +129,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="flex-1 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
+                <div className="flex flex-col sm:flex-row items-center gap-2 mb-1 flex-wrap">
                   <h2 className="text-xl sm:text-2xl font-bold">{user?.dname || user?.piuser || "Guest"}</h2>
                   <Badge variant="secondary" className="text-xs">{user?.role || 'Collector'}</Badge>
                   {tierConfig && tierConfig.pricePi > 0 && (
@@ -124,6 +139,15 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.dname || user?.piuser?.toLowerCase() || "guest"}</p>
+                {/* Truncated wallet address with copy */}
+                {user?.piuser && (
+                  <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-mono bg-muted/50 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
+                    <span>{user.piuser.slice(0,6)}...{user.piuser.slice(-4)}</span>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={copyWallet}>
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 justify-center sm:justify-start mt-2">
                   <Button size="sm" variant="outline" onClick={toggleFollow} disabled={followLoading}
                     className="gap-1 text-xs">
@@ -150,7 +174,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">Loading...</p>
                 ) : !tierConfig || tierConfig.pricePi === 0 ? (
                   <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">Free tier â€¢ 10% fees on sales</p>
+                    <p className="text-sm text-muted-foreground">Free tier – 10% fees on sales</p>
                     <Button asChild size="sm" className="w-full">
                       <Link href="/subscribe">Upgrade & Save 50%</Link>
                     </Button>
@@ -169,9 +193,6 @@ export default function ProfilePage() {
                       </Button>
                       <Button asChild size="sm" className="flex-1">
                         <Link href={user?.role === 'creator' ? '/creator/dashboard' : '/collector/portfolio'}>View Dashboard</Link>
-                        <Button asChild size="sm" className="flex-1">
-                          <Link href="/moderate">Moderate Content</Link>
-                        </Button>
                       </Button>
                     </div>
                   </div>
@@ -195,35 +216,12 @@ export default function ProfilePage() {
             </Card>
             <Card>
               <CardHeader className="pb-2"><CardDescription className="flex items-center gap-1 text-sm"><Users className="w-4 h-4" />NFTs Minted</CardDescription></CardHeader>
-              <CardContent><div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length}</div><p className="text-xs text-muted-foreground mt-1">On Stellar blockchain</p></CardContent>
+              <CardContent><div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length}</div><p className="text-xs text-muted-foreground mt-1">On Pi blockchain</p></CardContent>
             </Card>
           </div>
         )}
         {user?.role === "creator" && (
           <>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Subscription</CardTitle>
-                  {tierConfig && tierConfig.pricePi > 0 && <Badge>{tierConfig.name}</Badge>}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingSub ? <p className="text-sm text-muted-foreground">Loading...</p> : !tierConfig || tierConfig.pricePi === 0 ? (
-                  <div className="space-y-3"><p className="text-sm text-muted-foreground">Free tier â€¢ 10% fees on sales</p><Button asChild size="sm" className="w-full"><Link href="/subscribe">Upgrade & Save 50%</Link></Button></div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><p className="text-muted-foreground text-xs">Plan</p><p className="font-medium">{tierConfig?.name}</p></div>
-                      <div><p className="text-muted-foreground text-xs">Fee</p><p className="font-medium text-green-600">{tierConfig?.marketplaceFeePercent}%</p></div>
-                      <div><p className="text-muted-foreground text-xs">NFTs/Month</p><p className="font-medium">{tierConfig?.bulkMintingLimit || 'Unlimited'}</p></div>
-                      <div><p className="text-muted-foreground text-xs">Expires</p><p className="font-medium text-xs">{subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'N/A'}</p></div>
-                    </div>
-                    <div className="flex gap-2"><Button variant="outline" asChild size="sm" className="flex-1"><Link href="/subscribe">Manage Plan</Link></Button><Button asChild size="sm" className="flex-1"><Link href="/creator/dashboard">Dashboard</Link></Button></div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link href="/mint"><Card className="hover:border-primary transition-colors cursor-pointer"><CardContent className="pt-6 text-center"><Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto mb-3" /><h3 className="font-semibold mb-1">Mint New NFT</h3><p className="text-sm text-muted-foreground">Upload and sell your audio</p></CardContent></Card></Link>
               <Link href="/marketplace"><Card className="hover:border-accent transition-colors cursor-pointer"><CardContent className="pt-6 text-center"><ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-accent mx-auto mb-3" /><h3 className="font-semibold mb-1">View Marketplace</h3><p className="text-sm text-muted-foreground">See all minted NFTs</p></CardContent></Card></Link>

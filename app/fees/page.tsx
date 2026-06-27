@@ -1,8 +1,8 @@
-import { Header } from "@/components/header"
+﻿import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowLeft, FileText } from "lucide-react"
+import { ArrowLeft, FileText, Coins, Percent, Users, Gift, Wallet, Shield } from "lucide-react"
 import Link from "next/link"
 import type { Metadata } from 'next'
 
@@ -37,7 +37,7 @@ export default function FeesPage() {
               Fee Structure
             </CardTitle>
             <CardDescription>
-              Last Updated: February 2026
+              Last Updated: June 2026
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 text-sm sm:text-base">
@@ -47,7 +47,10 @@ export default function FeesPage() {
               </p>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">1. NFT Sales Fees</h2>
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  1. NFT Sales Fees
+                </h2>
                 <h3 className="font-semibold text-sm sm:text-base mt-4">Primary Sale (Initial Minting & Sale)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center my-4">
                   <div className="p-4 bg-background border rounded-lg">
@@ -62,7 +65,7 @@ export default function FeesPage() {
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-sm font-medium">Gas Fees Apply</p>
-                    <p className="text-xs text-muted-foreground mt-2">Paid by the minter to the Pi Network</p>
+                    <p className="text-xs text-muted-foreground mt-2">Handled by the Pi blockchain</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">
@@ -84,18 +87,21 @@ export default function FeesPage() {
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-xl font-bold">Remainder</p>
                     <p className="text-sm font-medium">Seller Receives</p>
-                    <p className="text-xs text-muted-foreground mt-2">After platform fee & royalty</p>
+                    <p className="text-xs text-muted-foreground mt-2">After platform fee &amp; royalty</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg">
                     <p className="text-sm font-medium">Gas Fees Apply</p>
-                    <p className="text-xs text-muted-foreground mt-2">Paid by the seller to the Pi Network</p>
+                    <p className="text-xs text-muted-foreground mt-2">Handled by the Pi blockchain</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground"><strong>Note:</strong> Creator royalties are automatically enforced and distributed by Smart Contracts on every secondary sale.</p>
               </section>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">2. Creator Tipping Fees</h2>
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  2. Creator Tipping Fees
+                </h2>
                 <p className="text-muted-foreground">
                   To support creators directly, users may send Tips. A small platform fee helps maintain this service and prevent system abuse.
                 </p>
@@ -103,26 +109,29 @@ export default function FeesPage() {
                   <div className="text-center">
                     <p className="text-2xl font-bold text-primary">1%</p>
                     <p className="text-sm font-medium">Platform Tip Fee</p>
-                    <p className="text-xs text-muted-foreground mt-2">+ Stellar Network Fee (~0.00001 XLM)</p>
+                    <p className="text-xs text-muted-foreground mt-2">+ Pi Network gas fee</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A 1% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure. This fee structure is subject to review and may be adjusted in the future. All adjustments will be communicated transparently.
+                  A 1% fee is deducted from the tip amount to support platform operations related to the tipping infrastructure.
                 </p>
               </section>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">3. Subscription Plans</h2>
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  3. Subscription Plans
+                </h2>
                 <p className="text-muted-foreground">
-                  Aurafloor offers optional subscription plans that unlock enhanced features and reduced platform fees (5% instead of 10%).
+                  Aurafloor offers optional subscription plans that unlock enhanced features and reduced platform fees (5% instead of 10%). Subscription data is synced in real-time across your account.
                 </p>
 
                 <h3 className="font-semibold text-sm sm:text-base mt-4">Collector Subscriptions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
                   <div className="p-4 bg-background border rounded-lg text-center">
-                    <p className="text-2xl font-bold text-primary">5 π/month</p>
+                    <p className="text-2xl font-bold text-primary">10 π/month</p>
                     <p className="text-sm font-medium">Collector Premium</p>
-                    <p className="text-xs text-muted-foreground mt-2">5% fees, ad‑free, HD audio, early access</p>
+                    <p className="text-xs text-muted-foreground mt-2">5% fees, ad-free, HD audio, early access</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg text-center">
                     <p className="text-2xl font-bold text-purple-600">15 π/month</p>
@@ -134,14 +143,14 @@ export default function FeesPage() {
                 <h3 className="font-semibold text-sm sm:text-base mt-4">Creator Subscriptions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
                   <div className="p-4 bg-background border rounded-lg text-center">
-                    <p className="text-2xl font-bold text-primary">10 π/month</p>
+                    <p className="text-2xl font-bold text-primary">20 π/month</p>
                     <p className="text-sm font-medium">Creator Premium</p>
                     <p className="text-xs text-muted-foreground mt-2">5% fees, 10 mints/month, analytics</p>
                   </div>
                   <div className="p-4 bg-background border rounded-lg text-center">
-                    <p className="text-2xl font-bold text-purple-600">25 π/month</p>
-                    <p className="text-sm font-medium">Creator Premium+</p>
-                    <p className="text-xs text-muted-foreground mt-2">Everything in Premium + unlimited mints, AI insights</p>
+                    <p className="text-2xl font-bold text-purple-600">30 π/month</p>
+                    <p className="text-sm font-medium">Creator Circle</p>
+                    <p className="text-xs text-muted-foreground mt-2">Everything in Premium + unlimited mints, AI insights, priority support</p>
                   </div>
                 </div>
 
@@ -153,7 +162,10 @@ export default function FeesPage() {
               </section>
 
               <section className="space-y-2">
-                <h2 className="font-semibold text-base sm:text-lg">4. Ad Revenue Share for Free Creators</h2>
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Percent className="h-5 w-5 text-primary" />
+                  4. Ad Revenue Share for Free Creators
+                </h2>
                 <p className="text-muted-foreground">
                   Creators who use the platform without a paid subscription are eligible to earn a share of advertising revenue.
                 </p>
@@ -165,18 +177,31 @@ export default function FeesPage() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Free Creators receive <strong>50% of net Pi Ads revenue (50% Treasury / 50% Creator Pool)</strong> that Aurafloor earns from Pi Ads served during streams of their audio content. Revenue share is calculated by the platform based on aggregated advertising performance metrics and paid out according to platform schedules. Amounts may vary with advertising market conditions.
+                  Free Creators receive <strong>50% of net Pi Ads revenue (50% Treasury / 50% Creator Pool)</strong> that Aurafloor earns from Pi Ads served during streams of their audio content.
                 </p>
               </section>
 
               <section className="space-y-2">
-          <section className="space-y-2">
-            <h2 className="font-semibold text-base sm:text-lg">5. Pi‑AURA Swap Fee</h2>
-            <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto text-center"><div><p className="text-2xl font-bold text-primary">0.3%</p><p className="text-sm font-medium">Swap Fee</p><p className="text-xs text-muted-foreground mt-2">Applied to all Pi‑AURA trades. 100% directed to the Development Wallet. A DAO staking pool will be introduced at a later phase.</p></div></div>
-          </section>
-                <h2 className="font-semibold text-base sm:text-lg">6. Network & Service Fees</h2>
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  5. Pi-AURA Swap Fee
+                </h2>
+                <div className="flex items-center justify-center p-4 bg-background border rounded-lg my-4 max-w-md mx-auto text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-primary">0.5%</p>
+                    <p className="text-sm font-medium">Swap Fee</p>
+                    <p className="text-xs text-muted-foreground mt-2">Applied to all Pi-AURA trades. 100% directed to the Development Wallet.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  6. Network & Service Fees
+                </h2>
                 <div className="space-y-1 text-muted-foreground">
-                  <p className="text-sm"><strong>Blockchain (Gas) Fees:</strong> Every on‑chain transaction requires payment of network fees to the Pi/Stellar Network. These fees vary and are non‑refundable.</p>
+                  <p className="text-sm"><strong>Blockchain (Gas) Fees:</strong> Every on-chain transaction requires payment of network fees to the Pi Network. These fees vary and are non-refundable.</p>
                   <p className="text-sm"><strong>No Hidden Fees:</strong> Apart from the fees listed above, Aurafloor charges no additional fees for standard platform use.</p>
                 </div>
               </section>
@@ -188,18 +213,22 @@ export default function FeesPage() {
                 </p>
               </section>
 
+              <section className="space-y-2">
+                <h2 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  8. AURA Token Rewards
+                </h2>
+                <p className="text-muted-foreground">AURA tokens are earned through meaningful platform participation. All rewards follow daily caps and anti-sybil measures. See the <Link href="/rewards" className="text-primary hover:underline">Rewards Hub</Link> for full details.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                  <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Approved Blog Post</p><p className="text-xs text-muted-foreground mt-2">Stake 100 AURA required</p></div>
+                  <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">10 AURA</p><p className="text-sm font-medium">Per Stream / Ad Watch</p><p className="text-xs text-muted-foreground mt-2">Daily caps apply</p></div>
+                  <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Correct Moderation Vote</p><p className="text-xs text-muted-foreground mt-2">Speed bonus up to +15%</p></div>
+                  <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Verified User Invited</p><p className="text-xs text-muted-foreground mt-2">Unlimited</p></div>
+                </div>
+              </section>
+
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
-          <section className="space-y-2">
-            <h2 className="font-semibold text-base sm:text-lg">9. AURA Token Rewards</h2>
-            <p className="text-muted-foreground">AURA tokens are earned through meaningful platform participation. All rewards follow daily caps and anti‑sybil measures. See the <Link href="/rewards" className="text-primary hover:underline">Rewards Hub</Link> for full details.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Approved Blog Post</p><p className="text-xs text-muted-foreground mt-2">Stake 100 AURA required</p></div>
-              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">10 AURA</p><p className="text-sm font-medium">Per Stream / Ad Watch</p><p className="text-xs text-muted-foreground mt-2">Daily caps apply</p></div>
-              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Correct Moderation Vote</p><p className="text-xs text-muted-foreground mt-2">Speed bonus up to +15%</p></div>
-              <div className="p-4 bg-background border rounded-lg"><p className="text-xl font-bold text-primary">25 AURA</p><p className="text-sm font-medium">Per Verified User Invited</p><p className="text-xs text-muted-foreground mt-2">Unlimited</p></div>
-            </div>
-          </section>
                   This Fee Structure is part of and governed by the Aurafloor <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>. All terms are subject to change with notice; your continued use constitutes acceptance.
                 </p>
               </div>

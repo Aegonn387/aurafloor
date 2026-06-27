@@ -31,6 +31,7 @@ import {
   Check,
   Pencil,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -427,68 +428,82 @@ export default function CommunityPage() {
     <div className="min-h-screen bg-background pb-20">
       <Header />
       <main className="container px-4 py-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">Community Hub</h1>
             <p className="text-muted-foreground">Connect with creators and collectors</p>
           </div>
-          <Dialog open={createPostOpen} onOpenChange={setCreatePostOpen}>
-            <DialogTrigger asChild>
-              <Button>Create Post</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create a Post</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="content">What's on your mind?</Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Share your thoughts, updates, or latest creations..."
-                    value={postContent}
-                    onChange={(e) => setPostContent(e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nft-link">Link an NFT (Optional)</Label>
-                  <Select value={selectedNFT} onValueChange={setSelectedNFT}>
-                    <SelectTrigger id="nft-link">
-                      <SelectValue placeholder="Select an NFT from your collection" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userNFTs.length > 0 ? (
-                        userNFTs.map((nft) => (
-                          <SelectItem key={nft.id} value={nft.id}>{nft.title}</SelectItem>
-                        ))
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/blog">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Read Blog
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/write">
+                <Pencil className="w-4 h-4 mr-2" />
+                Write Blog
+              </Link>
+            </Button>
+            <Dialog open={createPostOpen} onOpenChange={setCreatePostOpen}>
+              <DialogTrigger asChild>
+                <Button>Create Post</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Create a Post</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="content">What's on your mind?</Label>
+                    <Textarea
+                      id="content"
+                      placeholder="Share your thoughts, updates, or latest creations..."
+                      value={postContent}
+                      onChange={(e) => setPostContent(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nft-link">Link an NFT (Optional)</Label>
+                    <Select value={selectedNFT} onValueChange={setSelectedNFT}>
+                      <SelectTrigger id="nft-link">
+                        <SelectValue placeholder="Select an NFT from your collection" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userNFTs.length > 0 ? (
+                          userNFTs.map((nft) => (
+                            <SelectItem key={nft.id} value={nft.id}>{nft.title}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none">No NFTs available</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="outline" onClick={() => setCreatePostOpen(false)} disabled={creatingPost}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreatePost} disabled={!postContent.trim() || creatingPost}>
+                      {creatingPost ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Posting...
+                        </>
                       ) : (
-                        <SelectItem value="none">No NFTs available</SelectItem>
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Post
+                        </>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-end pt-2">
-                  <Button variant="outline" onClick={() => setCreatePostOpen(false)} disabled={creatingPost}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreatePost} disabled={!postContent.trim() || creatingPost}>
-                    {creatingPost ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Posting...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Post
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Tabs defaultValue="all" className="w-full">
@@ -578,7 +593,7 @@ export default function CommunityPage() {
                                 <p className="font-semibold text-sm truncate">{post.linkedNFT.title}</p>
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{post.linkedNFT.price}Ï€</Badge>
+                                <Badge variant="outline" className="text-xs">{post.linkedNFT.price}π</Badge>
                                 <Link href={`/nft/${post.linkedNFT.id}`}>
                                   <Button size="sm" variant="link" className="h-auto p-0 text-xs">
                                     View NFT<Link2 className="w-3 h-3 ml-1" />
@@ -641,7 +656,7 @@ export default function CommunityPage() {
                             placeholder="Write a comment..."
                             value={commentInputs[post.id] || ""}
                             onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
                                 handleAddComment(post.id);
