@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useStore } from "@/lib/store"
 import { subscriptionService } from "@/lib/subscription-service"
 import type { AudioTrack } from "@/lib/store"
@@ -42,7 +42,7 @@ export function useSubscriptionAudio(track: AudioTrack | null) {
           // Fallback to single audioUrl - request appropriate quality from backend
           const response = await fetch(`/api/stream/${track.id}?quality=${quality}`, {
             headers: {
-              Authorization: user ? `Bearer ${user.accessToken}` : ""
+              // Authorization removed – user.piuser handled server-side if needed
             }
           })
 
@@ -66,7 +66,6 @@ export function useSubscriptionAudio(track: AudioTrack | null) {
     track?.id,
     // user.subscription is a string ("free" | "premium") in your store
     user?.subscription,
-    user?.accessToken,
     setCurrentStreamUrl,
     setError
   ])

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
@@ -24,7 +24,7 @@ export default function CreatorDashboard() {
   const [analyticsBlocked, setAnalyticsBlocked] = useState(false)
 
   useEffect(() => {
-    if (user?.role !== 'creator') {
+    if (!user?.piuser) {
       router.push('/profile')
       return
     }
@@ -32,16 +32,16 @@ export default function CreatorDashboard() {
   }, [user, period])
 
   async function fetchDashboardData() {
-    if (!user?.uid || !user?.piaddr) return
+    if (!user?.piuser || !user?.piaddr) return
     setLoading(true)
     setAnalyticsBlocked(false)
     try {
       const [analyticsRes, revenueRes, subRes] = await Promise.all([
-        fetch(`/api/analytics/creator/${user.uid}?period=${period}&user_pi_address=${user.piaddr}`),
+        fetch(`/api/analytics/creator/${user.piuser}?period=${period}&user_pi_address=${user.piaddr}`),
         fetch('/api/revenue/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, period })
+          body: JSON.stringify({ userId: user.piuser, period })
         }),
         fetch(`/api/subscription/update?user_pi_address=${user.piaddr}`)
       ])
@@ -113,7 +113,7 @@ export default function CreatorDashboard() {
                     <p className="font-medium">{subscription.plan_name || 'Free Tier'}</p>
                     <p className="text-muted-foreground text-xs">
                       Platform fee: {subscription.commission_rate}%
-                      {subscription.tier === 'free' && ' • Analytics locked'}
+                      {subscription.tier === 'free' && ' â€¢ Analytics locked'}
                     </p>
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export default function CreatorDashboard() {
               <DollarSign className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{revenue?.totals?.total_revenue?.toFixed(2) || '0.00'}π</div>
+              <div className="text-2xl font-bold">{revenue?.totals?.total_revenue?.toFixed(2) || '0.00'}Ï€</div>
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <ArrowUpRight className="w-3 h-3 text-green-600" />
                 <span className="text-green-600">+12.5%</span> from last period
@@ -298,7 +298,7 @@ export default function CreatorDashboard() {
                             <p className="font-medium capitalize">{item.type.replace('_', ' ')}</p>
                             <p className="text-sm text-muted-foreground">{item.transaction_count} transactions</p>
                           </div>
-                          <p className="font-bold">{parseFloat(item.total_amount).toFixed(2)}π</p>
+                          <p className="font-bold">{parseFloat(item.total_amount).toFixed(2)}Ï€</p>
                         </div>
                       ))}
                     </div>
@@ -314,7 +314,7 @@ export default function CreatorDashboard() {
                   <CardDescription>Earnings from streaming ads</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold mb-2">{analytics?.ad_revenue?.total_ad_revenue?.toFixed(2) || '0.00'}π</div>
+                  <div className="text-2xl font-bold mb-2">{analytics?.ad_revenue?.total_ad_revenue?.toFixed(2) || '0.00'}Ï€</div>
                   <p className="text-sm text-muted-foreground">{analytics?.ad_revenue?.periods_paid || 0} payout periods</p>
                   {subscription?.tier === 'free' && (
                     <div className="mt-4 p-3 bg-muted rounded-lg">
@@ -341,7 +341,7 @@ export default function CreatorDashboard() {
                           <p className="font-medium capitalize">{item.type.replace('_', ' ')}</p>
                           <p className="text-sm text-muted-foreground">{new Date(item.date).toLocaleDateString()}</p>
                         </div>
-                        <p className="font-bold text-green-600">+{parseFloat(item.amount).toFixed(2)}π</p>
+                        <p className="font-bold text-green-600">+{parseFloat(item.amount).toFixed(2)}Ï€</p>
                       </div>
                     ))}
                   </div>
@@ -383,7 +383,7 @@ export default function CreatorDashboard() {
                               <span>{nft.sold_count} sold</span>
                             </div>
                           </div>
-                          <p className="font-bold">{nft.price}π</p>
+                          <p className="font-bold">{nft.price}Ï€</p>
                         </div>
                       ))}
                     </div>

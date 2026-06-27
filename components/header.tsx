@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -58,7 +58,7 @@ export function Header() {
                   <Button variant="ghost" size="icon">
                     <Avatar className="w-8 h-8">
                       <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                        {user.username[0].toUpperCase()}
+                        {(user.dname || user.piuser || "U")[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>

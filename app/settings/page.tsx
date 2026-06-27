@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                                 {subscription.status || 'Active'}
                               </Badge>
                               <span className="text-xs sm:text-sm text-muted-foreground">
-                                {subscription.tier === 'free' ? 'Free' : `${subscription.price_pi || 0}π per month`}
+                                {subscription.tier === 'free' ? 'Free' : `${subscription.price_pi || 0}Ï€ per month`}
                               </span>
                             </div>
                           </div>
@@ -126,7 +126,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Total Paid</span>
-                              <span>{subscription.total_paid || 0}π</span>
+                              <span>{subscription.total_paid || 0}Ï€</span>
                             </div>
                             {subscription.tier !== 'free' && (
                               <div className="flex justify-between">
@@ -222,7 +222,7 @@ export default function SettingsPage() {
                   <Label htmlFor="username" className="text-sm sm:text-base">Username</Label>
                   <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium text-sm sm:text-base">{user?.username || "Guest"}</span>
+                    <span className="font-medium text-sm sm:text-base">{user?.dname || user?.piuser || "Guest"}</span>
                   </div>
                 </div>
                 <div className="grid gap-2">

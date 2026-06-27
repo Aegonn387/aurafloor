@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useRef } from "react"
 import { useStore } from "@/lib/store"
@@ -43,7 +43,7 @@ export function MiniPlayer() {
           body: JSON.stringify({
             type: "stream",
             payload: {
-              user_id: useStore.getState().user?.uid || "anonymous",
+              user_id: useStore.getState().user?.piuser || "anonymous",
               track_id: currentTrack.id,
               quality: "standard",
               duration: Math.floor(audioElement.currentTime),

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/lib/store"
@@ -80,7 +80,7 @@ export function FullPlayer() {
           body: JSON.stringify({
             type: 'stream',
             payload: {
-              user_id: useStore.getState().user?.uid || 'anonymous',
+              user_id: useStore.getState().user?.piuser || 'anonymous',
               track_id: currentTrack.id,
               quality: currentQuality || 'standard',
               duration: Math.floor(audioElement.currentTime),

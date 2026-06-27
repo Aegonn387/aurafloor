@@ -6,16 +6,26 @@ import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Sparkles, TrendingUp, Zap } from "lucide-react"
+import { CheckCircle2, Sparkles, TrendingUp, Zap, Loader2 } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
-import { usePiPayment } from "@/hooks/usePiPayment"
 import { SUBSCRIPTION_TIERS, getTiersByRole, type TierConfig } from "@/lib/subscription-config"
+import { subscribeToService } from "@/lib/contracts"
+import { signTransaction, getPublicKey } from "@/lib/wallet"
+
+// Map tier IDs to service symbols (must match those registered on the contract)
+const tierToServiceId: Record<string, string> = {
+  'collector_free': 'CFREE',
+  'collector_basic': 'CBASIC',
+  'collector_premium': 'CPREM',
+  'collector_premium_plus': 'CPREM+',
+  'creator_pro': 'CRPRO',
+  'creator_circle': 'CRCIRCLE',
+}
 
 export default function SubscribePage() {
   const router = useRouter()
   const user = useStore((state) => state.user)
-  const { createPayment, loading: paymentLoading, error: paymentError } = usePiPayment()
   const [loading, setLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
 
@@ -27,22 +37,26 @@ export default function SubscribePage() {
     setSelectedPlan(tier.id)
     try {
       if (!user) { router.push("/auth"); return }
-      const paymentId = await createPayment({
-        amount: tier.pricePi,
-        memo: `Subscribe to ${tier.name}`,
-        metadata: { type: 'subscription', planId: tier.id, piAddress: user.piaddr }
-      })
-      if (!paymentId) throw new Error(paymentError || 'Payment failed')
-      const res = await fetch('/.netlify/functions/complete-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId, planId: tier.id, userPiAddress: user.piaddr, role: tier.role, price: tier.pricePi, durationDays: 30 })
-      })
-      const data = await res.json()
-      if (data.success) setTimeout(() => router.push("/profile?subscription=success"), 1500)
-      else alert(data.error || 'Failed')
-    } catch (err: any) { alert(err.message || 'Failed') }
-    finally { setLoading(false); setSelectedPlan(null) }
+
+      // Get user's wallet address
+      const walletAddress = await getPublicKey()
+      if (!walletAddress) throw new Error('Wallet not connected')
+
+      const serviceId = tierToServiceId[tier.id]
+      if (!serviceId) throw new Error(`No service mapping for tier ${tier.id}`)
+
+      // Subscribe to the service on the contract (1 period)
+      await subscribeToService(signTransaction, walletAddress, serviceId, 1)
+
+      alert('Subscription successful! You are now subscribed.')
+      router.push("/profile?subscription=success")
+    } catch (err: any) {
+      console.error('Subscription error:', err)
+      alert(err.message || 'Subscription failed')
+    } finally {
+      setLoading(false)
+      setSelectedPlan(null)
+    }
   }
 
   return (
@@ -93,6 +107,7 @@ export default function SubscribePage() {
                       variant={tier.id === 'collector_premium_plus' ? "default" : "outline"}
                       onClick={() => handleSubscribe(tier)}
                       disabled={loading}>
+                      {loading && selectedPlan === tier.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       {loading && selectedPlan === tier.id ? "Processing..." : "Subscribe Now"}
                     </Button>
                   )}
@@ -135,6 +150,7 @@ export default function SubscribePage() {
                       variant={tier.id === 'creator_circle' ? "default" : "outline"}
                       onClick={() => handleSubscribe(tier)}
                       disabled={loading}>
+                      {loading && selectedPlan === tier.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       {loading && selectedPlan === tier.id ? "Processing..." : "Subscribe Now"}
                     </Button>
                   )}

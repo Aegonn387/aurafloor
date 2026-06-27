@@ -1,0 +1,18 @@
+{
+    "deployer":  "GA2RQR63WXY56ADQ7YGMWCUUVWBFEKBJACTNUSJIAEV5AH2HBZHQPLAG",
+    "network":  "testnet",
+    "contracts":  {
+                      "audio-mint":  {
+                                         "id":  "CCLYXKJVCFUJWE7AAXYS2HJAOULA7A7BLD3364D5KEREIDO3GWW5TEW3",
+                                         "wasm":  "soroban/audio-mint/target/wasm32v1-none/release/audio_mint.wasm"
+                                     },
+                      "subscription":  {
+                                           "id":  "CAABJX37GELPJYYA6XTV3PW2Y5KNHJYNWJ6NDGAI32WZDDFF3NGW2DSL",
+                                           "wasm":  "soroban/subscription-contract/target/wasm32v1-none/release/subscription_contract.wasm"
+                                       },
+                      "marketplace":  {
+                                          "id":  "CBNFVWL3PJUTVU5GIM3EPO2CJEN5IWOIK4R4BAM5EJODWVRKEYHQAOQH",
+                                          "wasm":  "soroban/marketplace-contract/target/wasm32v1-none/release/marketplace_contract.wasm"
+                                      }
+                  }
+}

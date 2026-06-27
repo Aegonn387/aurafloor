@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
@@ -74,7 +74,7 @@ export default function CommunityPage() {
   const { toast } = useToast();
   useEffect(() => {
     fetchPosts();
-    if (user?.uid) {
+    if (user?.piuser) {
       fetchUserNFTs();
     }
   }, [user]);
@@ -115,9 +115,9 @@ export default function CommunityPage() {
   };
 
   const fetchUserNFTs = async () => {
-    if (!user?.uid) return;
+    if (!user?.piuser) return;
     try {
-      const response = await fetch(`/api/user/${user.uid}/nfts`);
+      const response = await fetch(`/api/user/${user.piuser}/nfts`);
       if (response.ok) {
         const data = await response.json();
         setUserNFTs(data);
@@ -169,7 +169,7 @@ export default function CommunityPage() {
         body: JSON.stringify({
           content: postContent,
           linkedNFTId: selectedNFT || null,
-          uid: user.uid,
+          uid: user.piuser,
         }),
       });
       if (response.ok) {
@@ -177,9 +177,9 @@ export default function CommunityPage() {
         const newPost = data.post || data;
         const postToAdd: Post = {
           id: newPost.id,
-          author: user.dname || user.piuser || user.username || "User",
-          authorId: user.uid,
-          role: user.role || "collector",
+          author: user.dname || user.piuser || "User",
+          authorId: user.piuser || "",
+          role: "collector",
           content: newPost.content,
           timestamp: "Just now",
           likes: 0,
@@ -223,7 +223,7 @@ export default function CommunityPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: editContent,
-          uid: user.uid,
+          uid: user.piuser,
         }),
       });
       if (response.ok) {
@@ -254,7 +254,7 @@ export default function CommunityPage() {
       const response = await fetch(`/api/community/posts/${deletingPostId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.uid }),
+        body: JSON.stringify({ uid: user.piuser }),
       });
       if (response.ok) {
         setPosts(posts.filter(p => p.id !== deletingPostId));
@@ -280,7 +280,7 @@ export default function CommunityPage() {
       const response = await fetch("/api/community/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId, content, uid: user.uid }),
+        body: JSON.stringify({ postId, content, uid: user.piuser }),
       });
       if (response.ok) {
         const newComment = await response.json();
@@ -288,8 +288,8 @@ export default function CommunityPage() {
           if (post.id === postId) {
             const commentToAdd: Comment = {
               id: newComment.id,
-              author: user.username,
-              authorId: user.uid,
+              author: user.dname || user.piuser || "User",
+              authorId: user.piuser || "",
               content: newComment.content,
               timestamp: "Just now",
               likes: 0,
@@ -317,7 +317,7 @@ export default function CommunityPage() {
   };
 
   const handleLike = async (postId: string) => {
-    if (!user?.uid) {
+    if (!user?.piuser) {
       alert("Please sign in to like posts");
       return;
     }
@@ -340,7 +340,7 @@ export default function CommunityPage() {
       const response = await fetch(`/api/community/likes/${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.uid })
+        body: JSON.stringify({ uid: user.piuser })
       });
       if (!response.ok) {
         // Revert on error
@@ -544,7 +544,7 @@ export default function CommunityPage() {
                             <Flag className="w-4 h-4 mr-2" />
                             Report
                           </DropdownMenuItem>
-                          {user?.uid === post.authorId && (
+                          {user?.piuser === post.authorId && (
                             <>
                               <DropdownMenuItem onClick={() => handleEditPost(post)}>
                                 <Pencil className="w-4 h-4 mr-2" />
@@ -578,7 +578,7 @@ export default function CommunityPage() {
                                 <p className="font-semibold text-sm truncate">{post.linkedNFT.title}</p>
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{post.linkedNFT.price}π</Badge>
+                                <Badge variant="outline" className="text-xs">{post.linkedNFT.price}Ï€</Badge>
                                 <Link href={`/nft/${post.linkedNFT.id}`}>
                                   <Button size="sm" variant="link" className="h-auto p-0 text-xs">
                                     View NFT<Link2 className="w-3 h-3 ml-1" />

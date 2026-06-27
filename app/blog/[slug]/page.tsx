@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from 'react';
 import { Header } from "@/components/header";
@@ -71,7 +71,7 @@ export default function BlogPostPage() {
         setReadRewarded(true);
         fetch('/.netlify/functions/nft-indexer', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'reward', payload: { user_id: user?.uid || 'reader', category: 'blog_read', amount: 2.5 } })
+          body: JSON.stringify({ type: 'reward', payload: { user_id: user?.piuser || 'reader', category: 'blog_read', amount: 2.5 } })
         }).catch(() => {});
       }, 30000);
       return () => clearTimeout(timer);
@@ -83,7 +83,7 @@ export default function BlogPostPage() {
     const res = await fetch(`/api/community/likes/${blogId}`, { method: 'POST' });
     const data = await res.json();
     if (data.success) { setLiked(data.liked); setLikeCount(data.count); }
-      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: user?.uid, category: 'blog_like', amount: 0.5 } }) }).catch(() => {});
+      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: user?.piuser, category: 'blog_like', amount: 0.5 } }) }).catch(() => {});
   };
 
   const postComment = async () => {
@@ -95,7 +95,7 @@ export default function BlogPostPage() {
     });
     const data = await res.json();
     if (data.success) { setComments(prev => [data.comment, ...prev]); setCommentText(''); }
-      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: user?.uid, category: 'blog_comment', amount: 5 } }) }).catch(() => {});
+      fetch('/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: user?.piuser, category: 'blog_comment', amount: 5 } }) }).catch(() => {});
     setCommenting(false);
   };
 
@@ -150,7 +150,7 @@ export default function BlogPostPage() {
                 <div className="space-y-3">
                   {comments.map(c => (
                     <div key={c.id} className="p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><User className="w-3 h-3" /> {c.author_id?.slice(0,8)}... • {new Date(c.created_at).toLocaleString()}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><User className="w-3 h-3" /> {c.author_id?.slice(0,8)}... â€¢ {new Date(c.created_at).toLocaleString()}</div>
                       <p className="text-sm">{c.content}</p>
                     </div>
                   ))}

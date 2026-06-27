@@ -89,7 +89,7 @@ export function usePiPayment(): UsePiPaymentReturn {
       console.log("[Payment] Created:", payment)
 
       setLoading(false)
-      return payment.identifier || null
+      return payment.paymentId || null
     } catch (err: any) {
       console.error("[Payment] Failed:", err)
       setError(err.message || "Payment creation failed")

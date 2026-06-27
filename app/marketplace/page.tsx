@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Search, Filter, Music, User, Play, Headphones, Flame } from 'lucide-react'
+import { Loader2, Search, Filter, Music, User, Play, Headphones, Flame, CheckCircle } from 'lucide-react'
 import { useStore } from "@/lib/store"
 import { Header } from "@/components/header"
-import { PurchaseModal } from "@/components/purchase-modal"
 import { TipModal } from "@/components/tip-modal"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 import { LoadMore } from "@/components/load-more"
+import { getListing, buyNFT } from "@/lib/contracts"
+import { signTransaction, getPublicKey } from "@/lib/wallet"
 
 interface NFT {
   id: string; tokenId: string; title: string; description: string; price: string;
@@ -25,37 +26,60 @@ interface NFT {
 export default function MarketplacePage() {
   const [allNfts, setAllNfts] = useState<NFT[]>([])
   const [loading, setLoading] = useState(true)
+  const [buying, setBuying] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [filter, setFilter] = useState("all")
-  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false)
   const [tipModalOpen, setTipModalOpen] = useState(false)
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
-  const { setCurrentTrack, setIsPlaying, setIsMiniPlayer } = useStore()
+  const { setCurrentTrack, setIsPlaying, setIsMiniPlayer, user } = useStore()
 
   useEffect(() => { loadNFTs() }, [])
 
   async function loadNFTs() {
     try {
       setLoading(true)
-      const response = await fetch('/api/stellar/get-listing/?getAll=true')
-      if (response.ok) {
-        const data = await response.json()
-        const transformedNFTs = data.listings?.map((listing: any, index: number) => ({
-          id: listing.tokenId || `nft-${index}`,
-          tokenId: listing.tokenId || index.toString(),
-          title: listing.metadata?.name || `Audio NFT #${listing.tokenId || index}`,
-          description: listing.metadata?.description || 'An exclusive audio NFT',
-          price: listing.price || '0.5',
-          owner: listing.owner || '',
-          seller: listing.seller || listing.owner || '',
-          royaltyInfo: listing.royaltyInfo || { receiver: '', royaltyBps: 0 },
-          metadata: listing.metadata || { name: `Audio NFT #${listing.tokenId || index}`, description: 'An exclusive audio NFT', image: '/placeholder-audio.jpg', duration: 180 },
-          audioUrls: { preview: `/api/audio/preview/${listing.tokenId}`, standard: `/api/audio/standard/${listing.tokenId}`, hq: `/api/audio/hq/${listing.tokenId}` }
-        })) || []
-        setAllNfts(transformedNFTs)
-      } else { setAllNfts([]) }
-    } catch (error) { console.error('Error loading NFTs:', error); setAllNfts([]) }
-    finally { setLoading(false) }
+      const listingId = "lst" // fixed ID from the contract
+      const result = await getListing(listingId)
+      
+      // The getListing returns the full response from the RPC.
+      // The actual listing data is in result.result (if successful).
+      let listing = result
+
+      if (listing && listing.active === true) {
+        const nft: NFT = {
+          id: listingId,
+          tokenId: listing.token_id?.toString() || "0",
+          title: `Audio NFT #${listing.token_id}`,
+          description: `Listed by ${listing.seller?.slice(0,8)}...`,
+          price: listing.price?.toString() || "0",
+          owner: listing.seller || "",
+          seller: listing.seller || "",
+          royaltyInfo: {
+            receiver: "", // not stored in Listing struct
+            royaltyBps: listing.royalty_bps || 0
+          },
+          metadata: {
+            name: `Audio NFT #${listing.token_id}`,
+            description: "Audio NFT listed on marketplace",
+            image: "/placeholder-audio.jpg",
+            duration: 180
+          },
+          audioUrls: {
+            preview: `/api/audio/preview/${listing.token_id}`,
+            standard: `/api/audio/standard/${listing.token_id}`,
+            hq: `/api/audio/hq/${listing.token_id}`
+          }
+        }
+        setAllNfts([nft])
+      } else {
+        setAllNfts([])
+      }
+    } catch (error) {
+      console.error('Error loading listing:', error)
+      setAllNfts([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const filteredNFTs = allNfts.filter(nft => {
@@ -69,8 +93,28 @@ export default function MarketplacePage() {
 
   const { items: displayedNFTs, loading: loadingMore, hasMore, loadMoreRef } = useInfiniteScroll({ initialItems: filteredNFTs, itemsPerPage: 12 })
 
-  const handleBuy = (nft: NFT) => { setSelectedNFT(nft); setPurchaseModalOpen(true) }
-  const handleTipCreator = (nft: NFT) => { setSelectedNFT(nft); setTipModalOpen(true) }
+  const handleBuy = async (nft: NFT) => {
+    if (!user?.piuser) {
+      alert("Please connect your wallet first.")
+      return
+    }
+    setBuying(true)
+    try {
+      await buyNFT(signTransaction, user.piuser, "lst")
+      alert("Purchase successful! The listing has been deactivated.")
+      await loadNFTs() // refresh
+    } catch (error: any) {
+      console.error('Buy failed:', error)
+      alert(error.message || "Purchase failed")
+    } finally {
+      setBuying(false)
+    }
+  }
+
+  const handleTipCreator = (nft: NFT) => {
+    setSelectedNFT(nft)
+    setTipModalOpen(true)
+  }
 
   const playAudioPreview = (nft: NFT) => {
     setCurrentTrack({ id: nft.id, title: nft.title, artist: nft.owner, coverUrl: nft.metadata?.image || '',
@@ -95,16 +139,20 @@ export default function MarketplacePage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
   const handlePromote = (nft: NFT) => {
-    alert(`Promote ${nft.title} – Burn 100 AURA to feature this NFT. Coming soon.`)
+    alert(`Promote ${nft.title} Ã¢â‚¬â€œ Burn 100 AURA to feature this NFT. Coming soon.`)
   }
 
   return (<>
     <Header />
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8"><h1 className="text-4xl font-bold mb-2">Audio NFT Marketplace</h1><p className="text-muted-foreground">Discover, stream, and collect exclusive audio NFTs</p></div>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Audio NFT Marketplace</h1>
+          <p className="text-muted-foreground">Discover, stream, and collect exclusive audio NFTs</p>
+        </div>
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input placeholder="Search audio NFTs..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
           <div className="flex gap-4">
@@ -112,7 +160,10 @@ export default function MarketplacePage() {
               <SelectTrigger className="w-[140px]"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Filter" /></SelectTrigger>
               <SelectContent><SelectItem value="all">All</SelectItem><SelectItem value="music">Music</SelectItem><SelectItem value="collectibles">Collectibles</SelectItem></SelectContent>
             </Select>
-            <Button onClick={loadNFTs} variant="outline" className="gap-2">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Refresh</Button>
+            <Button onClick={loadNFTs} variant="outline" className="gap-2" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Refresh
+            </Button>
           </div>
         </div>
 
@@ -122,7 +173,11 @@ export default function MarketplacePage() {
           <>
             <div className="mb-4"><p className="text-sm text-muted-foreground">{filteredNFTs.length} audio NFTs</p></div>
             {filteredNFTs.length === 0 ? (
-              <div className="text-center py-20"><Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><h3 className="text-xl font-semibold mb-2">No audio NFTs found</h3><p className="text-muted-foreground">{searchQuery ? 'Try a different search' : 'Check back soon'}</p></div>
+              <div className="text-center py-20">
+                <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No active listings</h3>
+                <p className="text-muted-foreground">{searchQuery ? 'Try a different search' : 'No NFT is currently listed for sale.'}</p>
+              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -148,7 +203,7 @@ export default function MarketplacePage() {
                             <p className="text-xs text-muted-foreground line-clamp-2">{nft.description}</p>
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-1"><User className="h-3 w-3" /><span>{getSellerDisplay(nft)}</span></div>
-                              <div className="flex items-center gap-1 font-medium"><span>{nft.price} π</span></div>
+                              <div className="flex items-center gap-1 font-medium"><span>{nft.price} ÃƒÂÃ¢â€šÂ¬</span></div>
                             </div>
                             {nft.royaltyInfo?.royaltyBps > 0 && (
                               <p className="text-xs text-muted-foreground">Royalty: {(nft.royaltyInfo.royaltyBps / 100).toFixed(1)}%</p>
@@ -158,7 +213,10 @@ export default function MarketplacePage() {
                         <CardFooter className="p-3 pt-0">
                           <div className="flex gap-1 w-full">
                             <Button size="sm" variant="outline" className="flex-1" onClick={() => playFullStream(nft)}><Headphones className="h-3.5 w-3.5 mr-1" />Stream</Button>
-                            <Button size="sm" className="flex-1" onClick={() => handleBuy(nft)}>Buy</Button>
+                            <Button size="sm" className="flex-1" onClick={() => handleBuy(nft)} disabled={buying}>
+                              {buying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                              Buy
+                            </Button>
                             <Button size="sm" variant="ghost" className="flex-1" onClick={() => handleTipCreator(nft)}>Tip</Button>
                             <Button size="sm" variant="outline" className="flex-1 text-orange-500 border-orange-500/50 hover:bg-orange-500/10" onClick={() => handlePromote(nft)} title="Burn AURA to promote">
                               <Flame className="h-3.5 w-3.5 mr-1" />Promote
@@ -176,7 +234,6 @@ export default function MarketplacePage() {
         )}
       </div>
     </div>
-    {selectedNFT && <PurchaseModal open={purchaseModalOpen} onOpenChange={setPurchaseModalOpen} track={{ id: selectedNFT.id, title: selectedNFT.title, artist: selectedNFT.owner, price: parseFloat(selectedNFT.price) || 0, coverUrl: selectedNFT.metadata?.image || "", audioUrl: selectedNFT.audioUrls?.preview || "", duration: selectedNFT.metadata?.duration || 180, owned: false }} />}
     {selectedNFT && <TipModal open={tipModalOpen} onOpenChange={setTipModalOpen} artistName={selectedNFT.owner} trackTitle={selectedNFT.title} />}
   </>)
 }

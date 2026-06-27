@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Header } from "@/components/header"
@@ -27,7 +27,7 @@ export default function ProfilePage() {
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSub, setLoadingSub] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { followers, isFollowing, toggle: toggleFollow, loading: followLoading } = useFollow(user?.username)
+  const { followers, isFollowing, toggle: toggleFollow, loading: followLoading } = useFollow(user?.dname || user?.piuser)
 
   useEffect(() => {
     async function fetchUserNFTs() {
@@ -104,9 +104,9 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-6">
               <div className="relative group">
                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 cursor-pointer" onClick={triggerFileInput}>
-                  {profileImage ? <AvatarImage src={profileImage} alt={user?.username || "User"} /> : null}
+                  {profileImage ? <AvatarImage src={profileImage} alt={user?.dname || user?.piuser || "User"} /> : null}
                   <AvatarFallback className="bg-primary text-primary-foreground text-xl sm:text-2xl">
-                    {user?.username?.[0] || "?"}
+                    {user?.dname || user?.piuser?.[0] || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -115,7 +115,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
-                  <h2 className="text-xl sm:text-2xl font-bold">{user?.username || "Guest"}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold">{user?.dname || user?.piuser || "Guest"}</h2>
                   <Badge variant="secondary" className="text-xs">{user?.role || 'Collector'}</Badge>
                   {tierConfig && tierConfig.pricePi > 0 && (
                     <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-xs">
@@ -123,7 +123,7 @@ export default function ProfilePage() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.username?.toLowerCase() || "guest"}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.dname || user?.piuser?.toLowerCase() || "guest"}</p>
                 <div className="flex items-center gap-2 justify-center sm:justify-start mt-2">
                   <Button size="sm" variant="outline" onClick={toggleFollow} disabled={followLoading}
                     className="gap-1 text-xs">
@@ -150,7 +150,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">Loading...</p>
                 ) : !tierConfig || tierConfig.pricePi === 0 ? (
                   <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">Free tier • 10% fees on sales</p>
+                    <p className="text-sm text-muted-foreground">Free tier â€¢ 10% fees on sales</p>
                     <Button asChild size="sm" className="w-full">
                       <Link href="/subscribe">Upgrade & Save 50%</Link>
                     </Button>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 {loadingSub ? <p className="text-sm text-muted-foreground">Loading...</p> : !tierConfig || tierConfig.pricePi === 0 ? (
-                  <div className="space-y-3"><p className="text-sm text-muted-foreground">Free tier • 10% fees on sales</p><Button asChild size="sm" className="w-full"><Link href="/subscribe">Upgrade & Save 50%</Link></Button></div>
+                  <div className="space-y-3"><p className="text-sm text-muted-foreground">Free tier â€¢ 10% fees on sales</p><Button asChild size="sm" className="w-full"><Link href="/subscribe">Upgrade & Save 50%</Link></Button></div>
                 ) : (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3 text-sm">

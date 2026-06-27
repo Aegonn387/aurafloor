@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import type React from "react"
 import { useState } from "react"
@@ -18,6 +18,8 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { usePiPayment } from "@/hooks/usePiPayment"
 import { getTierConfig } from "@/lib/subscription-config"
+import { mintAudioNFT } from "@/lib/contracts"
+import { signTransaction } from "@/lib/wallet"
 
 interface MintingProgress {
   stage: 'payment' | 'uploading' | 'metadata' | 'minting' | 'complete'
@@ -48,7 +50,6 @@ export default function MintPage() {
   const [totalEditions, setTotalEditions] = useState("100")
   const [moderationStatus, setModerationStatus] = useState<"pending" | "approved" | "rejected" | null>(null)
   const [moderationFeedback, setModerationFeedback] = useState("")
-  const [nftType, setNftType] = useState("audio")
   const [monetization, setMonetization] = useState<string[]>([])
   const [paymentId, setPaymentId] = useState<string | null>(null)
   const [mintingError, setMintingError] = useState<string | null>(null)
@@ -58,14 +59,18 @@ export default function MintPage() {
   const copyToClipboard = async (text: string, field: string) => {
     try { await navigator.clipboard.writeText(text); setCopiedField(field); setTimeout(() => setCopiedField(null), 2000) } catch (err) { console.error('Failed to copy:', err) }
   }
+
+  // Placeholder signer Ã¢â‚¬â€œ replace with actual wallet integration (e.g., Freighter)
+  
+
   const handleContentModeration = async () => {
     if (!audioFile) return
     setLoading(true); setModerationStatus("pending")
     try {
-      const contentId = user?.uid + '_' + Date.now()
+      const contentId = user?.piuser + '_' + Date.now()
       const res = await fetch('/.netlify/functions/moderate-content', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'screen', contentId, creatorWallet: user?.uid, title, audioUrl: '' })
+        body: JSON.stringify({ action: 'screen', contentId, creatorWallet: user?.piuser, title, audioUrl: '' })
       })
       const data = await res.json()
       if (data.success) {
@@ -78,7 +83,7 @@ export default function MintPage() {
   }
 
   const handleMint = async () => {
-    if (!audioFile || !title || !price || !user?.uid) {
+    if (!audioFile || !title || !price || !user?.piuser) {
       setMintingError("Please fill all required fields and ensure you are logged in")
       return
     }
@@ -91,8 +96,8 @@ export default function MintPage() {
       setMintingProgress({ stage: 'payment', message: 'Processing minting fee...' })
       const pid = await createPayment({
         amount: mintingFee,
-        memo: `Mint NFT: ${title}`,
-        metadata: { type: 'nft_mint', title, creator: user.uid }
+        memo: `Mint NFT: ${title}`, 
+        metadata: { type: 'nft_mint', title, creator: user.piuser }
       })
       if (!pid) throw new Error('Payment failed or cancelled')
       setPaymentId(pid)
@@ -108,15 +113,44 @@ export default function MintPage() {
         if (ipfsRes.ok) { const d = await ipfsRes.json(); coverCid = d.cid; coverIpfsUrl = d.ipfsUrl }
       }
       setMintingProgress({ stage: 'metadata', message: 'Minting on Pi blockchain...' })
-      const mintRes = await fetch('/.netlify/functions/mint-nft-pi', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId: pid, creatorWallet: user.uid, title, description, category, price: parseFloat(price), resaleFee: parseInt(resaleFee)*100, editionType, totalEditions: editionType==='limited' ? parseInt(totalEditions) : null, monetization, audioUrl, coverIpfsUrl, coverCid, audioFilename: audioFile.name, audioContentType: audioFile.type, coverFilename: coverFile?.name, coverContentType: coverFile?.type })
-      })
-      const result = await mintRes.json()
-      if (!result.success) throw new Error(result.error || 'Minting failed')
-      setMintingProgress({ stage: 'complete', message: 'NFT minted!', nextTokenId: result.nft?.tokenId, audioUrl: result.nft?.audioUrl, metadataCid: result.nft?.metadataCid, transactionHash: result.nft?.transactionHash })
-      setMintedNFT(result.nft)
-      setTimeout(() => setStep(4), 2000)
+
+      // --- Replace backend mint with contract call ---
+      const royaltyBps = parseInt(resaleFee) * 100; // convert % to basis points
+      // Use the user's wallet address as both the mint recipient and royalty receiver.
+      // The 	o parameter expects a Stellar address (G...).  user.piuser might be that address.
+      const recipientAddress = user.piuser; // or user.walletAddress if available
+      const metadataCid = coverCid || ""; // use coverCid from IPFS upload, or empty if no cover
+
+      // Call the deployed contract
+      const result = await mintAudioNFT(
+        signTransaction,
+        recipientAddress,
+        metadataCid,
+        audioUrl,
+        recipientAddress, // royalty receiver (same as creator)
+        royaltyBps
+      );
+
+      // The result contains transaction info; we simulate the NFT data for the UI.
+      // In a real integration, you would query the contract to get the token ID and other details.
+      const tokenId = 0;
+const txHash = result;
+
+      setMintingProgress({
+        stage: 'complete',
+        message: 'NFT minted!',
+        nextTokenId: typeof tokenId === 'number' ? tokenId : 0,
+        audioUrl,
+        metadataCid: metadataCid || 'Qm...',
+        transactionHash: txHash
+      });
+      setMintedNFT({
+        title,
+        tokenId: typeof tokenId === 'number' ? tokenId : 0,
+        royalty: resaleFee,
+        transactionHash: txHash
+      });
+      setTimeout(() => setStep(4), 2000);
     } catch (error: any) {
       console.error('[Mint] Error:', error)
       setMintingError(error.message || 'Minting failed')
@@ -175,16 +209,6 @@ export default function MintPage() {
               <CardDescription className="text-sm sm:text-base">Upload your music, podcast, or audio content</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-sm sm:text-base">NFT Type</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
-                  <button type="button" onClick={() => setNftType("audio")} className={cn("flex flex-col items-center justify-center p-3 sm:p-4 border rounded-lg transition-colors", nftType === "audio" ? "border-primary bg-primary/10" : "border-muted bg-muted/50", "cursor-pointer hover:bg-muted")}><Music2 className="w-5 h-5 sm:w-6 sm:h-6 mb-2" /><span className="text-xs font-medium">Audio</span></button>
-                  <button type="button" className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed" disabled><ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 mb-2" /><span className="text-xs font-medium">Digital Arts</span></button>
-                  <button type="button" className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed" disabled><Package className="w-5 h-5 sm:w-6 sm:h-6 mb-2" /><span className="text-xs font-medium">Collectibles</span></button>
-                  <button type="button" className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed" disabled><Brain className="w-5 h-5 sm:w-6 sm:h-6 mb-2" /><span className="text-xs font-medium">IP</span></button>
-                  <button type="button" className="flex flex-col items-center justify-center p-3 sm:p-4 border border-muted rounded-lg bg-muted/50 opacity-50 cursor-not-allowed" disabled><Radio className="w-5 h-5 sm:w-6 sm:h-6 mb-2" /><span className="text-xs font-medium">Live Rooms</span></button>
-                </div>
-              </div>
               <label htmlFor="audio-upload" className="flex flex-col items-center justify-center w-full h-48 sm:h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                 <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mb-3 sm:mb-4" />
                 <p className="text-sm font-medium mb-1">Click to upload audio</p>
@@ -259,10 +283,10 @@ export default function MintPage() {
               <CardDescription className="text-sm sm:text-base">Set your NFT price and royalty terms</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2"><Label htmlFor="price" className="text-sm sm:text-base">Price (π) *</Label>
+              <div className="space-y-2"><Label htmlFor="price" className="text-sm sm:text-base">Price (ÃƒÂÃ¢â€šÂ¬) *</Label>
                 <div className="relative">
                   <Input id="price" type="number" step="0.01" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} className="h-11 sm:h-12 pr-8 text-sm sm:text-base" />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">π</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">ÃƒÂÃ¢â€šÂ¬</span>
                 </div>
               </div>
               <div className="space-y-2"><Label htmlFor="resale-fee" className="text-sm sm:text-base">Resale Royalty (%) *</Label>
@@ -276,8 +300,8 @@ export default function MintPage() {
               <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-3">
                 <div className="flex items-start gap-2"><Info className="w-4 h-4 text-muted-foreground mt-0.5" /><div className="flex-1"><h3 className="font-semibold text-sm mb-2">Revenue Breakdown</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Your Earnings (90%)</span><span className="font-medium text-primary">{(Number.parseFloat(price || "0") * 0.9).toFixed(2)}π</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Platform Fee (10%)</span><span className="font-medium">{(Number.parseFloat(price || "0") * 0.1).toFixed(2)}π</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Your Earnings (90%)</span><span className="font-medium text-primary">{(Number.parseFloat(price || "0") * 0.9).toFixed(2)}ÃƒÂÃ¢â€šÂ¬</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Platform Fee (10%)</span><span className="font-medium">{(Number.parseFloat(price || "0") * 0.1).toFixed(2)}ÃƒÂÃ¢â€šÂ¬</span></div>
                     <Separator />
                     <div className="flex justify-between"><span className="text-muted-foreground">Resale Royalty</span><span className="font-medium text-primary">{resaleFee}%</span></div>
                   </div></div>
@@ -285,7 +309,7 @@ export default function MintPage() {
               </div>
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" onClick={() => setStep(2)} className="h-11 sm:h-12 flex-1">Back</Button>
-                <Button className="flex-1 h-11 sm:h-12 text-sm sm:text-base" onClick={handleMint} disabled={loading || !price}>{loading ? "Processing..." : "Mint NFT π"}</Button>
+                <Button className="flex-1 h-11 sm:h-12 text-sm sm:text-base" onClick={handleMint} disabled={loading || !price}>{loading ? "Processing..." : "Mint NFT ÃƒÂÃ¢â€šÂ¬"}</Button>
               </div>
             </CardContent>
           </Card>
@@ -332,7 +356,7 @@ export default function MintPage() {
                     <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">Royalty:</span><span className="text-sm font-medium">{mintedNFT.royalty}%</span></div>
                     {mintedNFT.transactionHash && <div className="flex justify-between items-start"><span className="text-sm text-muted-foreground">TX Hash:</span><div className="flex items-center gap-2"><code className="text-xs bg-background px-2 py-1 rounded max-w-[180px] truncate">{mintedNFT.transactionHash}</code><Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => copyToClipboard(mintedNFT.transactionHash, 'successTxHash')}>{copiedField==='successTxHash' ? <Check className="h-3 w-3"/> : <Copy className="h-3 w-3"/>}</Button></div></div>}
                     <Separator />
-                    <div className="text-center pt-2"><p className="text-xs text-muted-foreground mb-2">View on Pi Explorer:</p><a href="https://piscan.io" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Pi Explorer (coming soon) →</a></div>
+                    <div className="text-center pt-2"><p className="text-xs text-muted-foreground mb-2">View on Pi Explorer:</p><a href="https://piscan.io" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Pi Explorer (coming soon) ?</a></div>
                   </div>
                 )}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -348,3 +372,6 @@ export default function MintPage() {
     </div>
   )
 }
+
+
+

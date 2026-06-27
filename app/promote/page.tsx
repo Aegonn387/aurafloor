@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
@@ -68,15 +68,15 @@ export default function PromotePage() {
     const fetchNFTs = async () => {
       try {
         setNftsLoading(true)
-        const res = await fetch(`/api/nfts?uid=${user?.uid}`)
+        const res = await fetch(`/api/nfts?uid=${user?.piuser}`)
         if (!res.ok) throw new Error("Failed to fetch NFTs")
         const data = await res.json()
         setCreatorNFTs(data.nfts || data || [])
       } catch (error) { console.error(error) }
       finally { setNftsLoading(false) }
     }
-    if (user?.uid) fetchNFTs()
-  }, [user?.uid])
+    if (user?.piuser) fetchNFTs()
+  }, [user?.piuser])
 
   if (nftsLoading) {
     return (<div className="min-h-screen bg-background pb-20"><Header /><main className="container px-4 py-12"><Card><CardContent className="p-12 text-center"><div className="flex flex-col items-center gap-4"><div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /><p className="text-muted-foreground">Loading your NFTs...</p></div></CardContent></Card></main><MobileNav /></div>)
@@ -104,7 +104,7 @@ export default function PromotePage() {
                 <Select value={selectedNFT} onValueChange={setSelectedNFT}>
                   <SelectTrigger><SelectValue placeholder="Select an NFT" /></SelectTrigger>
                   <SelectContent>
-                    {creatorNFTs.map((nft) => (<SelectItem key={nft.id} value={nft.id}><div className="flex items-center gap-2"><Music2 className="w-4 h-4" /><span>{nft.title}</span><Badge variant="outline" className="ml-2">{nft.price}π</Badge></div></SelectItem>))}
+                    {creatorNFTs.map((nft) => (<SelectItem key={nft.id} value={nft.id}><div className="flex items-center gap-2"><Music2 className="w-4 h-4" /><span>{nft.title}</span><Badge variant="outline" className="ml-2">{nft.price}Ï€</Badge></div></SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -128,15 +128,15 @@ export default function PromotePage() {
                   <SelectContent><SelectItem value="3">3 days</SelectItem><SelectItem value="7">7 days (Recommended)</SelectItem><SelectItem value="14">14 days</SelectItem><SelectItem value="30">30 days</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Daily Budget ({paymentMethod==="pi"?"π":"AURA"})</Label>
+              <div className="space-y-2"><Label>Daily Budget ({paymentMethod==="pi"?"Ï€":"AURA"})</Label>
                 <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="100" min={minBudget} />
-                <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="w-3 h-3" />Minimum {minBudget} {paymentMethod==="pi"?"π":"AURA"}/day {isSubscriber && paymentMethod==="aura" && <span className="text-green-600">(50% subscriber discount)</span>}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="w-3 h-3" />Minimum {minBudget} {paymentMethod==="pi"?"Ï€":"AURA"}/day {isSubscriber && paymentMethod==="aura" && <span className="text-green-600">(50% subscriber discount)</span>}</p>
               </div>
               <Card className={paymentMethod==="pi"?"bg-primary/5 border-primary/20":"bg-orange-500/10 border-orange-500/20"}>
                 <CardContent className="p-4 space-y-2">
-                  <div className="flex justify-between text-sm"><span>Daily Budget:</span><span className="font-semibold">{budget} {paymentMethod==="pi"?"π":"AURA"}</span></div>
+                  <div className="flex justify-between text-sm"><span>Daily Budget:</span><span className="font-semibold">{budget} {paymentMethod==="pi"?"Ï€":"AURA"}</span></div>
                   <div className="flex justify-between text-sm"><span>Duration:</span><span className="font-semibold">{duration} days</span></div>
-                  <div className="border-t pt-2 flex justify-between"><span className="font-semibold">Total:</span><span className="text-xl font-bold">{totalCost} {paymentMethod==="pi"?"π":"AURA"} {paymentMethod==="aura"&&<Flame className="w-4 h-4 inline text-orange-500"/>}</span></div>
+                  <div className="border-t pt-2 flex justify-between"><span className="font-semibold">Total:</span><span className="text-xl font-bold">{totalCost} {paymentMethod==="pi"?"Ï€":"AURA"} {paymentMethod==="aura"&&<Flame className="w-4 h-4 inline text-orange-500"/>}</span></div>
                 </CardContent>
               </Card>
               <div className="flex gap-2"><Button variant="outline" onClick={() => setStep(1)} className="flex-1">Back</Button><Button onClick={() => setStep(3)} className="flex-1">Continue<ArrowRight className="w-4 h-4 ml-2" /></Button></div>
@@ -171,13 +171,13 @@ export default function PromotePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div><p className="text-sm text-muted-foreground mb-1">Duration</p><p className="font-semibold">{duration} days</p></div>
                 <div><p className="text-sm text-muted-foreground mb-1">Method</p><p className="font-semibold">{paymentMethod==="pi"?"Pi Payment":"AURA Burn"}</p></div>
-                <div><p className="text-sm text-muted-foreground mb-1">Daily</p><p className="font-semibold">{budget} {paymentMethod==="pi"?"π":"AURA"}</p></div>
+                <div><p className="text-sm text-muted-foreground mb-1">Daily</p><p className="font-semibold">{budget} {paymentMethod==="pi"?"Ï€":"AURA"}</p></div>
                 <div><p className="text-sm text-muted-foreground mb-1">Goal</p><p className="font-semibold capitalize">{promotionGoal}</p></div>
               </div>
               <Card className={paymentMethod==="pi"?"bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20":"bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20"}>
                 <CardContent className="p-6 text-center">
                   <p className="text-sm text-muted-foreground mb-1">{paymentMethod==="pi"?"Total Pi Cost":"Total AURA Burned"}</p>
-                  <p className="text-4xl font-bold mb-2">{totalCost} {paymentMethod==="pi"?"π":"AURA"} {paymentMethod==="aura"&&<Flame className="w-5 h-5 inline text-orange-500"/>}</p>
+                  <p className="text-4xl font-bold mb-2">{totalCost} {paymentMethod==="pi"?"Ï€":"AURA"} {paymentMethod==="aura"&&<Flame className="w-5 h-5 inline text-orange-500"/>}</p>
                   <p className="text-xs text-muted-foreground">{paymentMethod==="pi"?"Platform earns 100% of Pi payment.":"100% of AURA is permanently burned."}</p>
                 </CardContent>
               </Card>
@@ -195,7 +195,7 @@ export default function PromotePage() {
                     }
                     const res = await fetch('/.netlify/functions/promote-content', {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ nftId: selectedNFT, creatorWallet: user.uid, amount: totalCost, duration: Number(duration), goal: promotionGoal, audience: targetAudience, message, token: paymentMethod })
+                      body: JSON.stringify({ nftId: selectedNFT, creatorWallet: user.piuser, amount: totalCost, duration: Number(duration), goal: promotionGoal, audience: targetAudience, message, token: paymentMethod })
                     })
                     const data = await res.json()
                     if (data.success) setStep(5)
@@ -213,7 +213,7 @@ export default function PromotePage() {
             <CardContent className="p-12 text-center">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 className="w-10 h-10 text-primary" /></div>
               <h2 className="text-2xl font-bold mb-2">Promotion Launched!</h2>
-              <p className="text-muted-foreground mb-8">{paymentMethod==="pi"?`${totalCost}π has been paid.`:`${totalCost} AURA has been burned.`} Your NFT is now promoted for {duration} days.</p>
+              <p className="text-muted-foreground mb-8">{paymentMethod==="pi"?`${totalCost}Ï€ has been paid.`:`${totalCost} AURA has been burned.`} Your NFT is now promoted for {duration} days.</p>
               <div className="flex gap-3 justify-center">
                 <Link href="/profile"><Button variant="outline">View Dashboard</Button></Link>
                 <Button onClick={() => setStep(1)}>Promote Another</Button>

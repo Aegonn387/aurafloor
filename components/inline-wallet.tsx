@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -54,10 +54,10 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
 
   useEffect(() => {
     async function fetchUserNFTs() {
-      if (!user?.uid) return;
+      if (!user?.piuser) return;
       try {
         setLoadingNFTs(true);
-        const response = await fetch(`/api/user/${user.uid}/nfts`);
+        const response = await fetch(`/api/user/${user.piuser}/nfts`);
         if (response.ok) {
           const data = await response.json();
           setOwnedNFTs(data.nfts || []);
@@ -77,15 +77,15 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
         setLoadingNFTs(false);
       }
     }
-    if (user?.uid) fetchUserNFTs();
+    if (user?.piuser) fetchUserNFTs();
   }, [user]);
 
   useEffect(() => {
     async function fetchTransactions() {
-      if (!user?.uid) return;
+      if (!user?.piuser) return;
       try {
         setLoadingTransactions(true);
-        const response = await fetch(`/api/user/${user.uid}/transactions`);
+        const response = await fetch(`/api/user/${user.piuser}/transactions`);
         if (response.ok) {
           const data = await response.json();
           setTransactions(data.transactions || []);
@@ -96,7 +96,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
         setLoadingTransactions(false);
       }
     }
-    if (user?.uid) fetchTransactions();
+    if (user?.piuser) fetchTransactions();
   }, [user]);
 
   const copyAddress = () => {
@@ -141,8 +141,8 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
       if (response.ok) {
         alert('NFT listed successfully!');
         setListingModalOpen(false);
-        if (user?.uid) {
-          const refreshResponse = await fetch(`/api/user/${user.uid}/nfts`);
+        if (user?.piuser) {
+          const refreshResponse = await fetch(`/api/user/${user.piuser}/nfts`);
           const data = await refreshResponse.json();
           if (data.nfts) setOwnedNFTs(data.nfts);
         }
@@ -165,13 +165,13 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
       const amount = parseFloat(depositAmount);
       const paymentId = await createPayment({
         amount,
-        memo: `Deposit ${amount} π to Aurafloor`,
-        metadata: { type: 'deposit', amount, userId: user?.uid },
+        memo: `Deposit ${amount} Ï€ to Aurafloor`,
+        metadata: { type: 'deposit', amount, userId: user?.piuser },
       });
       if (paymentId) {
         setPlatformBalance(prev => prev + amount);
         setDepositAmount('');
-        alert(`Successfully deposited ${amount} π!`);
+        alert(`Successfully deposited ${amount} Ï€!`);
       } else {
         throw new Error(paymentError || 'Payment failed');
       }
@@ -189,7 +189,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
     setPlatformBalance(prev => prev - parseFloat(withdrawAmount));
     setWithdrawAmount('');
     setWithdrawAddress('');
-    alert(`Withdrawal request for ${withdrawAmount} π submitted`);
+    alert(`Withdrawal request for ${withdrawAmount} Ï€ submitted`);
   };
 
   const handleTransferNFT = (nftId: string) => {
@@ -206,7 +206,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                 <User className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <div className="font-medium">{user.dname || user.piuser || user.username || 'User'}</div>
+                <div className="font-medium">{user.dname || user.piuser || "User"}</div>
                 {user.piaddr && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span className="font-mono">{user.piaddr.slice(0,6)}...{user.piaddr.slice(-4)}</span>
@@ -232,18 +232,18 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
           <Card className="h-[calc(100vh-280px)] flex flex-col">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Pi Network Balance</CardTitle>
-              <CardDescription className="text-sm">Your internal π balance on Aurafloor</CardDescription>
+              <CardDescription className="text-sm">Your internal Ï€ balance on Aurafloor</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col overflow-hidden">
               <div className="text-center py-4 flex-shrink-0">
-                <div className="text-3xl font-bold">{platformBalance.toFixed(2)} π</div>
+                <div className="text-3xl font-bold">{platformBalance.toFixed(2)} Ï€</div>
                 <div className="text-sm text-muted-foreground mt-1">Available</div>
               </div>
               <Separator className="flex-shrink-0" />
 
               <div className="space-y-4 flex-1 overflow-y-auto pt-4">
                 <div className="space-y-3">
-                  <Label htmlFor="deposit-amount" className="text-sm">Add π to Platform</Label>
+                  <Label htmlFor="deposit-amount" className="text-sm">Add Ï€ to Platform</Label>
                   <div className="flex gap-2">
                     <Input id="deposit-amount" placeholder="0.00" type="number" step="0.01"
                       value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)}
@@ -252,16 +252,16 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                       disabled={!depositAmount || parseFloat(depositAmount) <= 0 || isProcessingPayment}
                       className="gap-2">
                       {isProcessingPayment ? (<><Loader2 className="w-4 h-4 animate-spin" />Processing</>)
-                      : (<><Plus className="w-4 h-4" />Add π</>)}
+                      : (<><Plus className="w-4 h-4" />Add Ï€</>)}
                     </Button>
                   </div>
-                  {!user?.uid && (
+                  {!user?.piuser && (
                     <p className="text-xs text-amber-600">Pi Network SDK not detected. Demo mode active.</p>
                   )}
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="withdraw-amount" className="text-sm">Withdraw π</Label>
+                  <Label htmlFor="withdraw-amount" className="text-sm">Withdraw Ï€</Label>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-2">
                       <Input id="withdraw-amount" placeholder="Amount" type="number" step="0.01"
@@ -326,7 +326,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                           <span className="font-medium text-sm truncate">{nft.metadata?.name || `NFT #${nft.tokenId}`}</span>
                           <Badge className="bg-green-600 text-xs">Owned</Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">Price: {(nft.price / 1000000).toFixed(2)} π</p>
+                        <p className="text-xs text-muted-foreground truncate">Price: {(nft.price / 1000000).toFixed(2)} Ï€</p>
                         <p className="text-xs font-mono text-muted-foreground mt-1 truncate">{nft.tokenId}</p>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
@@ -380,7 +380,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                       </div>
                       <div className="text-right flex-shrink-0 ml-4">
                         <div className={`font-medium text-sm ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)} π
+                          {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)} Ï€
                         </div>
                       </div>
                     </div>
@@ -395,10 +395,10 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                   <span className="text-sm font-medium">Security Information</span>
                 </div>
                 <div className="text-xs space-y-1 text-muted-foreground">
-                  <p>• Uses Pi Network's official payment system</p>
-                  <p>• All transactions recorded on Pi blockchain</p>
-                  <p>• We don't hold private keys</p>
-                  <p>• Withdrawals require verification</p>
+                  <p>â€¢ Uses Pi Network's official payment system</p>
+                  <p>â€¢ All transactions recorded on Pi blockchain</p>
+                  <p>â€¢ We don't hold private keys</p>
+                  <p>â€¢ Withdrawals require verification</p>
                 </div>
                 <Button variant="ghost" size="sm" className="w-full mt-3 gap-2" onClick={() => window.location.href = '/help'}>
                   <HelpCircle className="w-4 h-4" /> Help & Support
@@ -427,7 +427,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Price (π)</Label>
+                <Label htmlFor="price">Price (Ï€)</Label>
                 <Input id="price" type="number" step="0.01" placeholder="0.00" value={listPrice} onChange={(e) => setListPrice(e.target.value)} />
               </div>
               <div className="flex gap-2 justify-end">

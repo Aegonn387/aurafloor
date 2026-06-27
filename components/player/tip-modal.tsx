@@ -1,12 +1,13 @@
-"use client"
+﻿"use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Gift, Send, Loader2, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePiPayment } from "@/hooks/usePiPayment"
 
 interface TipModalProps {
   open: boolean
@@ -23,18 +24,12 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
   const [message, setMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [piSDKLoaded, setPiSDKLoaded] = useState(false)
 
-  useEffect(() => {
-    // Check if Pi SDK is loaded
-    if (typeof window !== 'undefined' && window.Pi) {
-      setPiSDKLoaded(true)
-    }
-  }, [])
+  const { createPayment, loading: paymentLoading, error: paymentError } = usePiPayment()
 
   const handleTip = async () => {
     if (!amount && !customAmount) return
-    
+
     const tipAmount = parseFloat(customAmount || amount)
     if (isNaN(tipAmount) || tipAmount <= 0) {
       setError("Please enter a valid amount")
@@ -45,12 +40,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
     setError(null)
 
     try {
-      if (!piSDKLoaded || !window.Pi) {
-        throw new Error("Pi Network SDK not loaded. Please ensure you're accessing this from the Pi Browser.")
-      }
-
-      // Initialize Pi SDK payment
-      const payment = await window.Pi.createPayment({
+      const paymentId = await createPayment({
         amount: tipAmount,
         memo: `Tip for "${trackTitle}" by ${artistName}${message ? ` - ${message}` : ''}`,
         metadata: {
@@ -60,78 +50,17 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
           message,
           timestamp: new Date().toISOString()
         }
-      }, {
-        onReadyForServerApproval: async (paymentId: string) => {
-          console.log('Payment ready for approval:', paymentId)
-          
-          // Call your backend to approve the payment
-          const response = await fetch('/api/pi/approve-payment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              paymentId,
-              artistName,
-              trackTitle,
-              amount: tipAmount,
-              message
-            })
-          })
-
-          if (!response.ok) {
-            throw new Error('Payment approval failed')
-          }
-
-          return response.json()
-        },
-        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          console.log('Payment ready for completion:', paymentId, txid)
-          
-          // Call your backend to complete the payment
-          const response = await fetch('/api/pi/complete-payment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              paymentId,
-              txid,
-              artistName,
-              trackTitle,
-              amount: tipAmount,
-              message
-            })
-          })
-
-          if (!response.ok) {
-            throw new Error('Payment completion failed')
-          }
-
-          return response.json()
-        },
-        onCancel: (paymentId: string) => {
-          console.log('Payment cancelled:', paymentId)
-          setError('Payment was cancelled')
-          setIsLoading(false)
-        },
-        onError: (error: Error, payment: any) => {
-          console.error('Payment error:', error, payment)
-          setError(error.message || 'Payment failed')
-          setIsLoading(false)
-        }
       })
 
-      // Payment successful
-      console.log('Payment completed:', payment)
+      if (!paymentId) {
+        throw new Error(paymentError || 'Payment failed or was cancelled')
+      }
 
       // Reset form
       setAmount("")
       setCustomAmount("")
       setMessage("")
       onOpenChange(false)
-
-      // Show success message
 
     } catch (error: any) {
       console.error("Tip failed:", error)
@@ -166,15 +95,6 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {!piSDKLoaded && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Pi Network SDK not detected. Please open this app in the Pi Browser to send tips.
-              </AlertDescription>
-            </Alert>
-          )}
-
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -184,7 +104,7 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
 
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Tip {artistName} for creating &quot;{trackTitle}&quot;
+              Tip {artistName} for creating "{trackTitle}"
             </p>
 
             <div className="space-y-4">
@@ -198,7 +118,6 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                       variant={amount === tip.toString() ? "default" : "outline"}
                       className="h-10"
                       onClick={() => handleAmountSelect(tip)}
-                      disabled={!piSDKLoaded}
                     >
                       {tip}p
                     </Button>
@@ -218,7 +137,6 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                     value={customAmount}
                     onChange={(e) => handleCustomAmountChange(e.target.value)}
                     className="pl-8"
-                    disabled={!piSDKLoaded}
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     p
@@ -233,7 +151,6 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                   placeholder="Add a message..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  disabled={!piSDKLoaded}
                 />
               </div>
 
@@ -250,9 +167,9 @@ export function TipModal({ open, onOpenChange, artistName, trackTitle }: TipModa
                 type="submit"
                 className="w-full"
                 onClick={handleTip}
-                disabled={!totalAmount || isLoading || !piSDKLoaded}
+                disabled={!totalAmount || isLoading || paymentLoading}
               >
-                {isLoading ? (
+                {isLoading || paymentLoading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
                   <Send className="w-4 h-4 mr-2" />

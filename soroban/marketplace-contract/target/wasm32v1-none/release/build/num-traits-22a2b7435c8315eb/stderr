@@ -1,7 +1,7 @@
 error[E0463]: can't find crate for `std`
   |
   = note: the `wasm32v1-none` target may not support the standard library
-  = note: `std` is required by `autocfg_017ab1e05942ec7b_0` because it does not declare `#![no_std]`
+  = note: `std` is required by `autocfg_d3ad2be4f8bae22f_0` because it does not declare `#![no_std]`
 
 error: cannot resolve a prelude import
 

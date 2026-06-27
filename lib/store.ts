@@ -1,7 +1,12 @@
 import { create } from "zustand"
-import type { PiUser } from "./pi-auth"
+export interface PiUser {
+  uid: string
+  username: string
+  accessToken: string
+}
 
 export interface ExtendedPiUser extends PiUser {
+  role?: "creator" | "collector"
   subscription?: { tier: string; plan?: string }
   // Add database fields from u table
   dname?: string

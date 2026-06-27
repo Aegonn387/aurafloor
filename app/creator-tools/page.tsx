@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -12,12 +12,12 @@ import { getTierConfig } from "@/lib/subscription-config"
 
 export default function CreatorToolsPage() {
   const user = useStore((state) => state.user)
-  const tierKey = (user?.role === 'creator' ? 'creator_' : 'collector_') + (user?.subscription?.tier || 'free')
+  const tierKey = "collector_" + (user?.subscription?.tier || "free")
   const tierConfig = getTierConfig(tierKey as any)
   const isProOrAbove = tierConfig?.bulkMintingLimit != null
   const isCircle = tierConfig?.id === 'creator_circle'
 
-  if (user?.role !== "creator") {
+  if (tierConfig?.role !== "creator") {
     return (
       <div className="min-h-screen bg-background pb-20">
         <Header />

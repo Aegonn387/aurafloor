@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from 'react';
 import { Header } from "@/components/header";
@@ -89,7 +89,7 @@ export default function CreatorReviewPage() {
         body: JSON.stringify({
           action,
           review_notes: reviewNotes,
-          reviewed_by: user?.username || user?.piuser || 'Admin'
+          reviewed_by: user?.piuser || 'Admin'
         }),
       });
 
@@ -229,7 +229,7 @@ export default function CreatorReviewPage() {
 
                       <p className="text-xs text-muted-foreground">
                         Applied: {new Date(app.applied_at).toLocaleDateString()}
-                        {app.reviewed_at && ` • Reviewed: ${new Date(app.reviewed_at).toLocaleDateString()}`}
+                        {app.reviewed_at && ` â€¢ Reviewed: ${new Date(app.reviewed_at).toLocaleDateString()}`}
                       </p>
                     </div>
 

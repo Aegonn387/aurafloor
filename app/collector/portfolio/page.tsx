@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
@@ -27,7 +27,7 @@ export default function CollectorPortfolio() {
   })
 
   useEffect(() => {
-    if (user?.role !== 'collector') {
+    if (!user?.piuser) {
       router.push('/profile')
       return
     }
@@ -63,7 +63,7 @@ export default function CollectorPortfolio() {
     }
   }
 
-  if (!user || user.role !== 'collector') {
+  if (!user || !user?.piuser) {
     return null
   }
 
@@ -89,7 +89,7 @@ export default function CollectorPortfolio() {
                   <div className="text-sm">
                     <p className="font-medium">{subscription.plan_name || 'Free Tier'}</p>
                     <p className="text-muted-foreground text-xs">
-                      {subscription.has_ad_free ? 'Ad-free • HD audio' : 'Limited features'}
+                      {subscription.has_ad_free ? 'Ad-free â€¢ HD audio' : 'Limited features'}
                     </p>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ export default function CollectorPortfolio() {
               <Wallet className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total_value.toFixed(2)}π</div>
+              <div className="text-2xl font-bold">{stats.total_value.toFixed(2)}Ï€</div>
               <p className="text-xs text-muted-foreground mt-1">Current market value</p>
             </CardContent>
           </Card>
@@ -131,7 +131,7 @@ export default function CollectorPortfolio() {
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total_spent.toFixed(2)}π</div>
+              <div className="text-2xl font-bold">{stats.total_spent.toFixed(2)}Ï€</div>
               <p className="text-xs text-muted-foreground mt-1">All-time purchases</p>
             </CardContent>
           </Card>
@@ -233,7 +233,7 @@ export default function CollectorPortfolio() {
                             <p className="text-sm text-muted-foreground">Purchased</p>
                           </div>
                         </div>
-                        <p className="font-bold">{(parseFloat(nft.price) / 1000000).toFixed(2)}π</p>
+                        <p className="font-bold">{(parseFloat(nft.price) / 1000000).toFixed(2)}Ï€</p>
                       </div>
                     ))}
                   </div>
