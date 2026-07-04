@@ -112,51 +112,31 @@ export default function MintPage() {
     try {
       console.log('[Mint] Starting minting process...')
 
-      // 1. Convert files to base64 for transmission
-      const audioData = await fileToBase64(audioFile)
-      const coverData = coverFile ? await fileToBase64(coverFile) : null
-
-      console.log('[Mint] Files converted, creating payment...')
-
-      // 2. Call approve-payment with all NFT data
-      const response = await fetch('/.netlify/functions/approve-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creatorWallet: user.uid,
-          title,
-          description,
-          category,
-          price: parseFloat(price),
-          resaleFee: parseInt(resaleFee) * 100, // Convert percentage to integer (5% = 500)
-          editionType,
-          totalEditions: editionType === "limited" ? parseInt(totalEditions) : null,
-          monetization: monetization.length > 0 ? { types: monetization } : null,
-          audioData,
-          audioFilename: audioFile.name,
-          audioContentType: audioFile.type,
-          coverData,
-          coverFilename: coverFile?.name,
-          coverContentType: coverFile?.type,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || data.details || 'Payment creation failed')
-      }
-
-      const paymentId = data.paymentId
-      setPaymentId(paymentId)
-      console.log('[Mint] Payment created:', paymentId)
-
-      // 3. Use Pi SDK to complete payment
       if (!window.Pi) {
         throw new Error('Pi SDK not available. Please make sure you are using the Pi Browser.')
       }
 
-      // Initiate Pi payment flow
+      const audioData = await fileToBase64(audioFile)
+      const coverData = coverFile ? await fileToBase64(coverFile) : null
+
+      const nftData = {
+        creatorWallet: user.uid,
+        title,
+        description,
+        category,
+        price: parseFloat(price),
+        resaleFee: parseInt(resaleFee) * 100,
+        editionType,
+        totalEditions: editionType === "limited" ? parseInt(totalEditions) : null,
+        monetization: monetization.length > 0 ? { types: monetization } : null,
+        audioData,
+        audioFilename: audioFile.name,
+        audioContentType: audioFile.type,
+        coverData,
+        coverFilename: coverFile?.name,
+        coverContentType: coverFile?.type,
+      }
+
       const paymentData = {
         amount: parseFloat(price),
         memo: `Mint NFT: ${title}`,
@@ -167,29 +147,36 @@ export default function MintPage() {
           category,
           resaleFee: parseInt(resaleFee),
         },
-        uid: user.uid,
       }
 
       console.log('[Mint] Creating Pi payment with data:', paymentData)
 
-      // Use Pi SDK to create payment
-      const payment = await window.Pi.createPayment(paymentData, {
-        onReadyForServerApproval: async (paymentId: string) => {
-          console.log('[Mint] Pi payment ready for approval:', paymentId)
-          // Approve the payment on server
-          // No return needed - Pi SDK expects void
-        },
-        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          console.log('[Mint] Pi payment approved, completing...', paymentId, txid)
+      await window.Pi.createPayment(paymentData, {
+        onReadyForServerApproval: async (piPaymentId: string) => {
+          console.log('[Mint] Pi payment ready for approval:', piPaymentId)
+          setPaymentId(piPaymentId)
 
-          // 4. Call complete-payment with txid
+          const response = await fetch('/.netlify/functions/approve-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: piPaymentId, ...nftData }),
+          })
+
+          const data = await response.json()
+
+          if (!data.success) {
+            throw new Error(data.error || data.details || 'Payment approval failed')
+          }
+
+          console.log('[Mint] Payment approved and NFT data stored:', piPaymentId)
+        },
+        onReadyForServerCompletion: async (piPaymentId: string, txid: string) => {
+          console.log('[Mint] Pi payment approved, completing...', piPaymentId, txid)
+
           const completeResponse = await fetch('/.netlify/functions/complete-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentId,
-              txid,
-            }),
+            body: JSON.stringify({ paymentId: piPaymentId, txid }),
           })
 
           const result = await completeResponse.json()
@@ -198,29 +185,26 @@ export default function MintPage() {
             throw new Error(result.error || result.details || 'Minting failed')
           }
 
+          setMintedNFT(result.nft)
+          setStep(4)
+
           return result
         },
-        onCancel: (paymentId: string) => {
-          console.log('[Mint] Payment cancelled:', paymentId)
-          throw new Error('Payment was cancelled by user')
+        onCancel: (piPaymentId: string) => {
+          console.log('[Mint] Payment cancelled:', piPaymentId)
+          setMintingError('Payment was cancelled')
         },
-        onError: (error: any, paymentId?: string) => {
-          console.error('[Mint] Pi payment error:', error, paymentId)
-          throw new Error('Pi payment failed: ' + (error.message || 'Unknown error'))
+        onError: (error: any, piPaymentId?: string) => {
+          console.error('[Mint] Pi payment error:', error, piPaymentId)
+          setMintingError('Pi payment failed: ' + (error?.message || 'Unknown error'))
         }
       })
 
-      console.log('[Mint] Pi payment completed successfully')
-
-      // 5. Handle successful minting
-      // The payment is successful if we reach here without errors
-      // The onReadyForServerCompletion callback already handled the success
-      // We just need to confirm the payment completed without errors
+      console.log('[Mint] Pi payment flow initiated successfully')
 
     } catch (error) {
       console.error('[Mint] Error:', error)
       setMintingError(error instanceof Error ? error.message : 'Minting failed. Please try again.')
-
     } finally {
       setLoading(false)
     }

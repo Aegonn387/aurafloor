@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,63 +14,26 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [sdkError, setSdkError] = useState<string | null>(null)
 
   useEffect(() => {
-    const initializePi = async () => {
-      try {
-        setSdkError(null)
+    if (!open) return
 
-        if (typeof window !== "undefined" && window.Pi) {
-          console.log("[Pi SDK] Already loaded, initializing...")
-
-          try {
-            window.Pi.init({ version: "2.0", sandbox: process.env.NODE_ENV === "development" })
-            setPiInitialized(true)
-            console.log("[Pi SDK] Initialized successfully")
-          } catch (initError) {
-            console.error("[Pi SDK] Init error:", initError)
-            setPiInitialized(true)
-          }
-          return
-        }
-
-        console.log("[Pi SDK] Loading script...")
-        const script = document.createElement("script")
-        script.src = "https://sdk.minepi.com/pi-sdk.js"
-        script.async = true
-
-        script.onload = () => {
-          console.log("[Pi SDK] Script loaded, initializing...")
-
-          setTimeout(() => {
-            if (window.Pi) {
-              try {
-                window.Pi.init({ version: "2.0", sandbox: process.env.NODE_ENV === "development" })
-                setPiInitialized(true)
-                console.log("[Pi SDK] Initialized successfully")
-              } catch (initError) {
-                console.error("[Pi SDK] Init error:", initError)
-                setPiInitialized(true)
-              }
-            } else {
-              console.error("[Pi SDK] Pi object not available after script load")
-              setSdkError("Pi SDK loaded but not available. Please use Pi Browser.")
-            }
-          }, 100)
-        }
-
-        script.onerror = (error) => {
-          console.error("[Pi SDK] Failed to load script:", error)
-          setSdkError("Failed to load Pi SDK. Please check your connection.")
-        }
-
-        document.head.appendChild(script)
-      } catch (error) {
-        console.error("[Pi SDK] Initialization error:", error)
-        setSdkError("Error initializing Pi SDK")
-      }
+    if (typeof window !== "undefined" && (window as any)._piSdkState?.initialized) {
+      setPiInitialized(true)
+      return
     }
 
-    if (open) {
-      initializePi()
+    setSdkError(null)
+    const onReady = () => setPiInitialized(true)
+    window.addEventListener("pi-sdk-ready", onReady)
+
+    const timeout = setTimeout(() => {
+      if (!(window as any)._piSdkState?.initialized) {
+        setSdkError("Pi SDK failed to load. Please use Pi Browser.")
+      }
+    }, 10000)
+
+    return () => {
+      window.removeEventListener("pi-sdk-ready", onReady)
+      clearTimeout(timeout)
     }
   }, [open])
 

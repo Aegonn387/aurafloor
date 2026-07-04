@@ -5,6 +5,7 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL!);
 
 interface NFTMintRequest {
+  paymentId: string;
   creatorWallet: string;
   title: string;
   description: string;
@@ -20,18 +21,6 @@ interface NFTMintRequest {
   coverData?: string; // base64 string (optional)
   coverFilename?: string;
   coverContentType?: string;
-}
-
-interface PiPaymentResponse {
-  identifier: string;
-  user_uid: string;
-  amount: number;
-  memo: string;
-  metadata: any;
-  from_address: string;
-  created_at: string;
-  network: string;
-  direction: string;
 }
 
 export const handler: Handler = async (event) => {
@@ -53,6 +42,7 @@ export const handler: Handler = async (event) => {
 
     // Validate required fields
     const requiredFields = [
+      'paymentId',
       'creatorWallet',
       'title',
       'price',
@@ -92,55 +82,23 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    console.log('[Approve Payment] Creating Pi payment for:', body.title);
+    const { paymentId } = body;
 
-    // 1. Create Pi payment
+    console.log('[Approve Payment] Storing NFT data for payment:', paymentId);
+
     const piApiKey = process.env.PI_API_KEY;
     if (!piApiKey) {
       throw new Error('PI_API_KEY environment variable is not set');
     }
 
-    // Prepare payment data for Pi Network
-    const paymentData = {
-      amount: body.price,
-      memo: "Mint NFT: " + body.title,
-      metadata: {
-        type: 'nft_mint',
-        title: body.title,
-        creatorWallet: body.creatorWallet,
-        category: body.category,
-        resaleFee: body.resaleFee / 100, // Convert back to percentage
-      },
-      uid: body.creatorWallet, // Pi wallet address
-    };
-
-    // Make request to Pi Network API
-    const piResponse = await fetch('https://api.minepi.com/v2/payments', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Key ${piApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
-    });
-
-    if (!piResponse.ok) {
-      const errorText = await piResponse.text();
-      throw new Error(`Pi payment creation failed: ${errorText}`);
-    }
-
-    const piPayment: PiPaymentResponse = await piResponse.json();
-    const paymentId = piPayment.identifier;
-
-    console.log('[Approve Payment] Pi payment created:', paymentId);
-
-    // 2. Convert base64 strings to buffers for BYTEA storage
+    // Convert base64 strings to buffers for BYTEA storage
     const audioBuffer = Buffer.from(body.audioData, 'base64');
     const coverBuffer = body.coverData
       ? Buffer.from(body.coverData, 'base64')
       : null;
 
-    // 3. Store NFT data in pending_nft_mints table
+    // Store NFT data in pending_nft_mints table, keyed by the real
+    // Pi payment ID that the client's createPayment() call generated
     const insertQuery = `
       INSERT INTO pending_nft_mints (
         payment_id,
@@ -203,7 +161,25 @@ export const handler: Handler = async (event) => {
 
     console.log('[Approve Payment] NFT data stored for payment:', paymentId);
 
-    // 4. Return payment ID and Pi payment details to frontend
+    // Now approve the payment with Pi Servers
+    const piApiUrl = `https://api.minepi.com/v2/payments/${paymentId}/approve`;
+    const piResponse = await fetch(piApiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${piApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!piResponse.ok) {
+      const errorText = await piResponse.text();
+      // Roll back the stored mint data since approval failed
+      await sql`DELETE FROM pending_nft_mints WHERE payment_id = ${paymentId}`;
+      throw new Error(`Pi payment approval failed: ${errorText}`);
+    }
+
+    console.log('[Approve Payment] Pi payment approved:', paymentId);
+
     return {
       statusCode: 200,
       headers: {
@@ -213,14 +189,7 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({
         success: true,
         paymentId,
-        piPayment: {
-          identifier: piPayment.identifier,
-          amount: piPayment.amount,
-          memo: piPayment.memo,
-          user_uid: piPayment.user_uid,
-          network: piPayment.network,
-        },
-        message: 'Payment created successfully. Please approve in your Pi wallet.'
+        message: 'Payment approved. Please confirm in your Pi wallet.'
       })
     };
 
@@ -234,7 +203,7 @@ export const handler: Handler = async (event) => {
         'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
-        error: 'Failed to create payment',
+        error: 'Failed to approve payment',
         details: error instanceof Error ? error.message : 'Unknown error',
         success: false
       })

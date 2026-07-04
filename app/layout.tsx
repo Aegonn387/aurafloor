@@ -65,7 +65,7 @@ export default function RootLayout({
               function initializePiSdk() {
                 if (window.Pi && !window._piSdkState.initialized) {
                   try {
-                    window.Pi.init({ version: "2.0", sandbox: true });
+                    window.Pi.init({ version: "2.0", sandbox: window.location.hostname === "localhost" });
                     window._piSdkState.initialized = true;
                     window._piSdkState.loaded = true;
                     console.log('Pi SDK initialized globally');

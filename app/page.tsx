@@ -26,21 +26,16 @@ export default function HomePage() {
 
   // Initialize Pi SDK and check if user needs auth
   useEffect(() => {
-    const checkPiSDK = () => {
-      if (window.Pi) {
-        window.Pi.init({ version: "2.0", sandbox: true });
-        console.log("Pi SDK initialized in page");
-        // Check for incomplete payments
-        const onIncompletePaymentFound = (payment: any) => {
-          console.log("Incomplete payment found:", payment);
-          // Handle incomplete payment recovery here
-        };
-      } else {
-        // Retry after a delay if Pi SDK not loaded yet
-        setTimeout(checkPiSDK, 500);
-      }
-    };
-    checkPiSDK();
+    if (typeof window !== "undefined" && (window as any)._piSdkState?.initialized) {
+      console.log("Pi SDK already ready (page)");
+    } else {
+      const onReady = () => console.log("Pi SDK ready (page)");
+      window.addEventListener("pi-sdk-ready", onReady);
+      return () => window.removeEventListener("pi-sdk-ready", onReady)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!user) {
       const timer = setTimeout(() => setShowAuth(true), 500)
       return () => clearTimeout(timer)
@@ -195,8 +190,8 @@ export default function HomePage() {
       <TipModal
         open={tipModalOpen}
         onOpenChange={setTipModalOpen}
-        // @ts-ignore
-        track={selectedTrack}
+        artistName={selectedTrack?.artist ?? ""}
+        trackTitle={selectedTrack?.title ?? ""}
       />
       <AuthDialog
         open={showAuth}

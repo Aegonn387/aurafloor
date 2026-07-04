@@ -134,7 +134,7 @@ export function InlineWallet({ mode = 'collector', connected = true }: InlineWal
           
           // Call your backend to complete the payment
           try {
-            const response = await fetch('/api/payments/complete', {
+            const response = await fetch('/.netlify/functions/complete-payment', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId, txid })
