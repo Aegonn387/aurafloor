@@ -4,7 +4,7 @@ declare global {
   interface Window {
     Pi?: {
       init: (options: { version: string; sandbox?: boolean }) => void;
-      authenticate: (scopes: string[], options?: any) => Promise<{ user: { uid: string; piaddr: string; username?: string } }>;
+      authenticate: (scopes: string[], options?: any) => Promise<{ accessToken: string; user: { uid: string; piaddr: string; username?: string } }>;
       createPayment: (
         data: { amount: number; memo: string; metadata: any },
         callbacks: {

@@ -142,7 +142,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Auth] Success:", authResult.user)
 
-      const verifiedData = { user: authResult.user }
+      const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Auth] User verified:", verifiedData.user)
 
       setStep("role")
@@ -179,14 +179,14 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Role] Auth success:", authResult.user)
 
-      const verifiedData = { user: authResult.user }
+      const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Role] User verified:", verifiedData.user)
 
       setUser({
-        uid: authResult.user.uid,
-        username: authResult.user.username || authResult.user.uid,
-        accessToken: (authResult as any).accessToken || "",
-        dname: authResult.user.username,
+        uid: verifiedData.user.uid,
+        username: verifiedData.user.username || verifiedData.user.uid,
+        accessToken: authResult.accessToken,
+        dname: verifiedData.user.username,
         role: role
       })
 
