@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/lib/store"
 import { Music2, Disc3, CheckCircle2, AlertCircle } from "lucide-react"
+import { getPublicKey } from "@/lib/wallet"
 
 export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [loading, setLoading] = useState(false)
@@ -182,11 +183,38 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Role] User verified:", verifiedData.user)
 
+      let piaddr: string | undefined
+      try {
+        piaddr = await getPublicKey()
+      } catch (walletError) {
+        console.warn("[Role] No Pi wallet address available yet:", walletError)
+      }
+
+      try {
+        const syncResponse = await fetch('/.netlify/functions/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: verifiedData.user.uid,
+            username: verifiedData.user.username || verifiedData.user.uid,
+            piaddr,
+            role
+          })
+        })
+        const syncData = await syncResponse.json()
+        if (!syncResponse.ok || !syncData.success) {
+          console.error("[Role] User sync failed:", syncData.error)
+        }
+      } catch (syncError) {
+        console.error("[Role] User sync request failed:", syncError)
+      }
+
       setUser({
         uid: verifiedData.user.uid,
         username: verifiedData.user.username || verifiedData.user.uid,
         accessToken: authResult.accessToken,
         dname: verifiedData.user.username,
+        piaddr,
         role: role
       })
 
