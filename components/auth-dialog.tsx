@@ -135,7 +135,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
       console.log("[Auth] Starting Pi authentication...")
 
-      const scopes = ["username", "payments"]
+      const scopes = ["username", "payments", "wallet_address"]
       const onIncompletePaymentFound = (payment: any) => {
         console.log("[Auth] Incomplete payment found:", payment)
       }
@@ -172,7 +172,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
       console.log("[Role] Authenticating for role:", role)
 
-      const scopes = ["username", "payments"]
+      const scopes = ["username", "payments", "wallet_address"]
       const onIncompletePaymentFound = (payment: any) => {
         console.log("[Role] Incomplete payment found:", payment)
       }
