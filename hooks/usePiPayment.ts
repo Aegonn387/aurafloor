@@ -28,11 +28,6 @@ export function usePiPayment(): UsePiPaymentReturn {
     setError(null)
 
     try {
-      // Ensure we have the necessary scopes: wallet_address is needed for subscriptions
-      await window.Pi.authenticate(["username", "payments", "wallet_address"], (payment: any) => {
-        console.log("[Payment] Incomplete payment found during auth:", payment)
-      })
-
       const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       const baseUrl = isLocalhost ? "http://localhost:8888" : ""
 
@@ -66,7 +61,7 @@ export function usePiPayment(): UsePiPaymentReturn {
         },
 
         onIncompletePaymentFound: async (payment: any) => {
-          console.log("[Payment] Incomplete payment found:", payment)
+          console.log("[Payment] Incomplete payment found, completing:", payment)
           const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -75,7 +70,10 @@ export function usePiPayment(): UsePiPaymentReturn {
           if (!res.ok) {
             const err = await res.text()
             console.error("Incomplete payment completion failed:", err)
+            throw new Error(`Incomplete payment completion failed: ${err}`)
           }
+          console.log("[Payment] Incomplete payment completed successfully")
+          return await res.json()
         },
 
         onCancel: (paymentId: string) => {
