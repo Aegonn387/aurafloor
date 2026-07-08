@@ -1,8 +1,7 @@
-﻿import { Contract, rpc, xdr, Address, nativeToScVal, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
+import { Contract, rpc, xdr, Address, nativeToScVal, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
 
 const RPC_URL = 'https://rpc.testnet.minepi.com';
 const NETWORK_PASSPHRASE = 'Pi Testnet';
-
 const server = new rpc.Server(RPC_URL);
 
 export const CONTRACT_IDS = {
@@ -103,7 +102,9 @@ export async function buyNFT(
 
 export async function getListing(listingId: string) {
   const contract = new Contract(CONTRACT_IDS.marketplace);
-  const dummy = await server.getAccount(CONTRACT_IDS.marketplace);
+  // Use your funded simulation wallet instead of the contract ID
+  const simAccount = process.env.NEXT_PUBLIC_SIMULATION_ACCOUNT!;
+  const dummy = await server.getAccount(simAccount);
   const tx = new TransactionBuilder(dummy, {
     fee: '100000',
     networkPassphrase: NETWORK_PASSPHRASE,

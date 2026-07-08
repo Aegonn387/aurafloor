@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Header } from "@/components/header"
@@ -8,13 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, Crown, Upload, UserPlus, UserCheck, Copy } from "lucide-react"
+import { Settings, LogOut, Music2, Heart, Users, TrendingUp, Eye, ShoppingCart, Crown, Upload, Copy } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { NFTCard } from "@/components/nft-card"
 import { InlineWallet } from "@/components/inline-wallet"
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 import { LoadMore } from "@/components/load-more"
-import { useFollow } from "@/hooks/useFollow"
 import { SUBSCRIPTION_TIERS, getTierConfig } from "@/lib/subscription-config"
 import Link from "next/link"
 
@@ -27,7 +26,6 @@ export default function ProfilePage() {
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSub, setLoadingSub] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { followers, isFollowing, toggle: toggleFollow, loading: followLoading } = useFollow(user?.dname || user?.piuser)
 
   useEffect(() => {
     async function fetchUserNFTs() {
@@ -93,7 +91,7 @@ export default function ProfilePage() {
     fileInputRef.current?.click()
   }
 
-  // Determine subscription tier (default to free if not available)
+  // Determine subscription tier
   const getTierKey = () => {
     const rolePrefix = user?.role === 'creator' ? 'creator_' : 'collector_'
     const tier = subscription?.tier || 'free'
@@ -139,7 +137,6 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.dname || user?.piuser?.toLowerCase() || "guest"}</p>
-                {/* Truncated wallet address with copy */}
                 {user?.piuser && (
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-mono bg-muted/50 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
                     <span>{user.piuser.slice(0,6)}...{user.piuser.slice(-4)}</span>
@@ -148,17 +145,13 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 )}
-                <div className="flex items-center gap-2 justify-center sm:justify-start mt-2">
-                  <Button size="sm" variant="outline" onClick={toggleFollow} disabled={followLoading}
-                    className="gap-1 text-xs">
-                    {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">{followers} follower{followers !== 1 ? 's' : ''}</span>
-                </div>
               </div>
             </div>
+
+            {/* Wallet always visible, once */}
             <InlineWallet mode={user?.role === 'creator' ? 'creator' : 'collector'} connected={true} />
+
+            {/* Subscription card */}
             <Card className="mt-4">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -199,41 +192,73 @@ export default function ProfilePage() {
                 )}
               </CardContent>
             </Card>
+
             <div className="grid grid-cols-2 gap-2 pt-4 border-t">
               <Link href="/settings"><Button variant="outline" size="sm" className="w-full bg-transparent"><Settings className="w-4 h-4 mr-2" />Settings</Button></Link>
               <Button variant="outline" size="sm" onClick={handleLogout} className="w-full bg-transparent"><LogOut className="w-4 h-4 mr-2" />Logout</Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Creator stats (only for creators) – no duplicate wallet */}
         {user?.role === "creator" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="sm:col-span-2 lg:col-span-2">
-              <InlineWallet mode="creator" connected={true} />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card>
-              <CardHeader className="pb-2"><CardDescription className="flex items-center gap-1 text-sm"><Eye className="w-4 h-4" />Total Streams</CardDescription></CardHeader>
-              <CardContent><div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length > 0 ? '12.4K' : '0'}</div><p className="text-xs text-muted-foreground mt-1">Start minting to track</p></CardContent>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1 text-sm">
+                  <Eye className="w-4 h-4" />Total Streams
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length > 0 ? '12.4K' : '0'}</div>
+                <p className="text-xs text-muted-foreground mt-1">Start minting to track</p>
+              </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardDescription className="flex items-center gap-1 text-sm"><Users className="w-4 h-4" />NFTs Minted</CardDescription></CardHeader>
-              <CardContent><div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length}</div><p className="text-xs text-muted-foreground mt-1">On Pi blockchain</p></CardContent>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1 text-sm">
+                  <Users className="w-4 h-4" />NFTs Minted
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">{allUserNFTs.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">On Pi blockchain</p>
+              </CardContent>
             </Card>
           </div>
         )}
+
+        {/* Quick actions for creators */}
         {user?.role === "creator" && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link href="/mint"><Card className="hover:border-primary transition-colors cursor-pointer"><CardContent className="pt-6 text-center"><Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto mb-3" /><h3 className="font-semibold mb-1">Mint New NFT</h3><p className="text-sm text-muted-foreground">Upload and sell your audio</p></CardContent></Card></Link>
-              <Link href="/marketplace"><Card className="hover:border-accent transition-colors cursor-pointer"><CardContent className="pt-6 text-center"><ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-accent mx-auto mb-3" /><h3 className="font-semibold mb-1">View Marketplace</h3><p className="text-sm text-muted-foreground">See all minted NFTs</p></CardContent></Card></Link>
-            </div>
-          </>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link href="/mint">
+              <Card className="hover:border-primary transition-colors cursor-pointer">
+                <CardContent className="pt-6 text-center">
+                  <Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto mb-3" />
+                  <h3 className="font-semibold mb-1">Mint New NFT</h3>
+                  <p className="text-sm text-muted-foreground">Upload and sell your audio</p>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/marketplace">
+              <Card className="hover:border-accent transition-colors cursor-pointer">
+                <CardContent className="pt-6 text-center">
+                  <ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-accent mx-auto mb-3" />
+                  <h3 className="font-semibold mb-1">View Marketplace</h3>
+                  <p className="text-sm text-muted-foreground">See all minted NFTs</p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
         )}
+
         <Tabs defaultValue="collection" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="collection" className="text-xs sm:text-sm">Collection</TabsTrigger>
             <TabsTrigger value="favorites" className="text-xs sm:text-sm">Favorites</TabsTrigger>
             <TabsTrigger value="activity" className="text-xs sm:text-sm">Activity</TabsTrigger>
           </TabsList>
+
           <TabsContent value="collection" className="space-y-4 mt-6">
             {loading ? (
               <Card><CardContent className="py-12 text-center"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-sm text-muted-foreground">Loading your collection...</p></CardContent></Card>
@@ -250,9 +275,11 @@ export default function ProfilePage() {
               <Card><CardContent className="py-12 text-center"><Music2 className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3" /><h3 className="text-lg font-semibold mb-2">No NFTs Yet</h3><p className="text-sm text-muted-foreground mb-4">Start building your collection</p><Link href="/marketplace"><Button>Browse Marketplace</Button></Link></CardContent></Card>
             )}
           </TabsContent>
+
           <TabsContent value="favorites" className="space-y-4 mt-6">
             <Card><CardContent className="py-12 text-center"><Heart className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-3" /><h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3><p className="text-sm text-muted-foreground">Heart NFTs to save them here</p></CardContent></Card>
           </TabsContent>
+
           <TabsContent value="activity" className="space-y-4 mt-6">
             <Card><CardHeader><CardTitle className="text-lg">Recent Activity</CardTitle><CardDescription className="text-sm">Your latest actions on Aurafloor</CardDescription></CardHeader><CardContent className="space-y-3"><div className="text-center py-8 text-sm text-muted-foreground">Activity tracking coming soon</div></CardContent></Card>
           </TabsContent>
