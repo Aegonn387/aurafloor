@@ -26,9 +26,9 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    const API_KEY = process.env.PI_NETWORK_API_KEY
+    const API_KEY = process.env.PI_API_KEY
     if (!API_KEY) {
-      console.error('PI_NETWORK_API_KEY environment variable is not set')
+      console.error('PI_API_KEY environment variable is not set')
       return {
         statusCode: 500,
         body: JSON.stringify({ error: 'Server configuration error: API key missing' }),
