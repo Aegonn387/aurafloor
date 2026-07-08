@@ -21,11 +21,10 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
         if (typeof window !== "undefined" && window.Pi) {
           console.log("[Pi SDK] Already loaded, initializing...")
-
           try {
-            window.Pi.init({ 
-              version: "2.0", 
-              sandbox: process.env.NODE_ENV === "development" 
+            window.Pi.init({
+              version: "2.0",
+              sandbox: process.env.NODE_ENV === "development"
             })
             setPiInitialized(true)
             console.log("[Pi SDK] Initialized successfully")
@@ -43,13 +42,12 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
         script.onload = () => {
           console.log("[Pi SDK] Script loaded, initializing...")
-
           setTimeout(() => {
             if (window.Pi) {
               try {
-                window.Pi.init({ 
-                  version: "2.0", 
-                  sandbox: process.env.NODE_ENV === "development" 
+                window.Pi.init({
+                  version: "2.0",
+                  sandbox: process.env.NODE_ENV === "development"
                 })
                 setPiInitialized(true)
                 console.log("[Pi SDK] Initialized successfully")
@@ -99,7 +97,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       })
 
       console.log("[Verify] Status:", verificationResponse.status)
-
       const responseText = await verificationResponse.text()
       console.log("[Verify] Response:", responseText.substring(0, 200))
 
@@ -120,6 +117,28 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     }
   }
 
+  const completeIncompletePayment = async (payment: any) => {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    const baseUrl = isLocalhost ? "http://localhost:8888" : ""
+    
+    console.log("[Auth] Completing incomplete payment:", payment.identifier)
+    
+    const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payment }),
+    })
+    
+    if (!res.ok) {
+      const err = await res.text()
+      console.error("[Auth] Incomplete payment completion failed:", err)
+      throw new Error(`Failed to complete pending payment: ${err}`)
+    }
+    
+    console.log("[Auth] Incomplete payment completed successfully")
+    return await res.json()
+  }
+
   const handleConnect = async () => {
     setLoading(true)
     setSdkError(null)
@@ -136,8 +155,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       console.log("[Auth] Starting Pi authentication...")
 
       const scopes = ["username", "payments", "wallet_address"]
-      const onIncompletePaymentFound = (payment: any) => {
+      const onIncompletePaymentFound = async (payment: any) => {
         console.log("[Auth] Incomplete payment found:", payment)
+        return await completeIncompletePayment(payment)
       }
 
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
@@ -173,8 +193,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       console.log("[Role] Authenticating for role:", role)
 
       const scopes = ["username", "payments", "wallet_address"]
-      const onIncompletePaymentFound = (payment: any) => {
+      const onIncompletePaymentFound = async (payment: any) => {
         console.log("[Role] Incomplete payment found:", payment)
+        return await completeIncompletePayment(payment)
       }
 
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
