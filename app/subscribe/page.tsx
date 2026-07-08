@@ -10,8 +10,8 @@ import { CheckCircle2, Sparkles, TrendingUp, Zap, Loader2 } from "lucide-react"
 import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
 import { SUBSCRIPTION_TIERS, getTiersByRole, type TierConfig } from "@/lib/subscription-config"
-import { subscribeToService } from "@/lib/contracts"
-import { signTransaction, getPublicKey } from "@/lib/wallet"
+import { usePiPayment } from "@/hooks/usePiPayment"
+import { getPublicKey } from "@/lib/wallet"
 
 // Map tier IDs to service symbols (must match those registered on the contract)
 const tierToServiceId: Record<string, string> = {
@@ -32,6 +32,8 @@ export default function SubscribePage() {
   const collectorTiers = getTiersByRole('collector')
   const creatorTiers = getTiersByRole('creator')
 
+  const { createPayment } = usePiPayment()
+
   const handleSubscribe = async (tier: TierConfig) => {
     setLoading(true)
     setSelectedPlan(tier.id)
@@ -45,11 +47,32 @@ export default function SubscribePage() {
       const serviceId = tierToServiceId[tier.id]
       if (!serviceId) throw new Error(`No service mapping for tier ${tier.id}`)
 
-      // Subscribe to the service on the contract (1 period)
-      await subscribeToService(signTransaction, walletAddress, serviceId, 1)
+      // Step 1: Pay via Pi Browser native payment
+      const pid = await createPayment({
+        amount: tier.pricePi,
+        memo: `Subscribe to ${tier.name}`,
+        metadata: { type: 'subscription', tier: tier.id, serviceId, walletAddress }
+      })
+      if (!pid) throw new Error('Payment was cancelled or failed')
+
+      // Step 2: Call backend to complete subscription on smart contract
+      const res = await fetch('/.netlify/functions/complete-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: pid,
+          planId: serviceId,
+          userPiAddress: walletAddress,
+          role: tier.role,
+          price: tier.pricePi,
+          durationDays: 30,
+          token: 'pi'
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Subscription activation failed')
 
       alert('Subscription successful! You are now subscribed.')
-      router.push("/profile?subscription=success")
     } catch (err: any) {
       console.error('Subscription error:', err)
       alert(err.message || 'Subscription failed')

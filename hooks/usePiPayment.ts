@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useCallback } from "react"
 
@@ -28,6 +28,12 @@ export function usePiPayment(): UsePiPaymentReturn {
     setError(null)
 
     try {
+      // Ensure we have the payments scope before creating payment
+      // Pi SDK will silently use existing auth if scope already granted
+      await window.Pi.authenticate(["username", "payments"], (payment: any) => {
+        console.log("[Payment] Incomplete payment found during auth:", payment)
+      })
+
       const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       const baseUrl = isLocalhost ? "http://localhost:8888" : ""
 

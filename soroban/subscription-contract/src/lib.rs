@@ -144,4 +144,49 @@ impl SubscriptionContract {
         config.active = active;
         e.storage().instance().set(&service_id, &config);
     }
+
+    pub fn subscribe_user(
+        e: &Env,
+        admin: Address,
+        subscriber: Address,
+        service_id: Symbol,
+        approve_periods: u32,
+    ) {
+        admin.require_auth();
+        let stored_admin: Address = e.storage().instance().get(&Symbol::new(e, "admin")).unwrap();
+        if admin != stored_admin {
+            panic!("unauthorized");
+        }
+        let config: ServiceConfig = e.storage().instance().get(&service_id).unwrap();
+        if !config.active {
+            panic!("service inactive");
+        }
+        if approve_periods == 0 || approve_periods > config.max_periods {
+            panic!("invalid periods");
+        }
+        let key = (subscriber.clone(), service_id.clone());
+        if e.storage().instance().has(&key) {
+            panic!("already subscribed");
+        }
+        let now = e.ledger().timestamp();
+        let mut expires_at = now;
+        let mut remaining = approve_periods;
+        let mut trial_used = false;
+        if config.trial_period_days > 0 {
+            expires_at = now + (config.trial_period_days as u64) * 86400;
+            trial_used = true;
+        } else {
+            expires_at = now + (config.billing_period_days as u64) * 86400;
+            remaining -= 1;
+        }
+        let subscription = Subscription {
+            subscriber: subscriber.clone(),
+            service_id: service_id.clone(),
+            expires_at,
+            approved_periods_remaining: remaining,
+            last_charged_at: now,
+            trial_used,
+        };
+        e.storage().instance().set(&key, &subscription);
+    }
 }

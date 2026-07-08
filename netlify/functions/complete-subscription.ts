@@ -6,6 +6,7 @@ const sql = neon(process.env.DATABASE_URL!);
 const PI_RPC_URL = process.env.PI_RPC_URL || 'https://api.testnet.minepi.com';
 const NETWORK_PASSPHRASE = process.env.PI_NETWORK_PASSPHRASE || 'Pi Testnet';
 const AURA_TOKEN_CONTRACT = process.env.AURA_TOKEN_CONTRACT || '';
+const SUBSCRIPTION_CONTRACT = process.env.SUBSCRIPTION_CONTRACT || '';
 const BURNER_SECRET_KEY = process.env.BURNER_SECRET_KEY || '';
 
 interface CompleteSubscriptionRequest {
@@ -20,7 +21,6 @@ interface CompleteSubscriptionRequest {
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    await fetch('https://aurafloor.co.za/.netlify/functions/nft-indexer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reward', payload: { user_id: userPiAddress, category: 'subscription', amount: 50 } }) }).catch(() => {});
     return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   }
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -46,6 +46,9 @@ export const handler: Handler = async (event) => {
       await sql`INSERT INTO user_subscriptions (user_pi_address, plan_id, tier, plan_type, status, expires_at, last_payment_amount, last_payment_date, total_paid, created_at, updated_at) VALUES (${userPiAddress}, ${plan.id}, ${plan.tier}, ${role}, 'active', ${expiresAt.toISOString()}, ${price}, NOW(), ${price}, NOW(), NOW())`;
     }
 
+    // Update u table with subscription info
+    await sql`UPDATE u SET subtier = ${plan.tier}, subexp = ${expiresAt.toISOString()} WHERE piaddr = ${userPiAddress}`;
+
     // AURA burn
     if (token === 'aura' && AURA_TOKEN_CONTRACT && BURNER_SECRET_KEY) {
       try {
@@ -53,7 +56,7 @@ export const handler: Handler = async (event) => {
         const burnerKeypair = StellarSdk.Keypair.fromSecret(BURNER_SECRET_KEY);
         const burnerAccount = await server.getAccount(burnerKeypair.publicKey());
         const contract = new StellarSdk.Contract(AURA_TOKEN_CONTRACT);
-        const burnAmount = BigInt(Math.round(price * 1e7)); // convert Pi to stroops
+        const burnAmount = BigInt(Math.round(price * 1e7));
         const tx = new StellarSdk.TransactionBuilder(burnerAccount, {
           fee: StellarSdk.BASE_FEE,
           networkPassphrase: NETWORK_PASSPHRASE,
@@ -74,7 +77,38 @@ export const handler: Handler = async (event) => {
         }
       } catch (burnErr) {
         console.error('AURA burn failed:', burnErr);
-        // non-fatal: subscription still activated
+      }
+    }
+
+    // Subscribe user on smart contract
+    if (SUBSCRIPTION_CONTRACT && BURNER_SECRET_KEY) {
+      try {
+        const server = new StellarSdk.SorobanRpc.Server(PI_RPC_URL);
+        const burnerKeypair = StellarSdk.Keypair.fromSecret(BURNER_SECRET_KEY);
+        const burnerAccount = await server.getAccount(burnerKeypair.publicKey());
+        const contract = new StellarSdk.Contract(SUBSCRIPTION_CONTRACT);
+        const tx = new StellarSdk.TransactionBuilder(burnerAccount, {
+          fee: StellarSdk.BASE_FEE,
+          networkPassphrase: NETWORK_PASSPHRASE,
+        })
+          .addOperation(contract.call(
+            'subscribe_user',
+            new StellarSdk.Address(burnerKeypair.publicKey()),
+            new StellarSdk.Address(userPiAddress),
+            StellarSdk.nativeToScVal(planId, { type: 'symbol' }),
+            StellarSdk.nativeToScVal(1, { type: 'u32' })
+          ))
+          .setTimeout(180)
+          .build();
+        const sim = await server.simulateTransaction(tx);
+        if (StellarSdk.SorobanRpc.Api.isSimulationSuccess(sim)) {
+          const prepared = StellarSdk.SorobanRpc.assembleTransaction(tx, sim);
+          prepared.sign(burnerKeypair);
+          await server.sendTransaction(prepared);
+          console.log('Subscription contract tx sent');
+        }
+      } catch (subErr) {
+        console.error('Subscription contract call failed:', subErr);
       }
     }
 

@@ -1,7 +1,7 @@
 ﻿import { Contract, rpc, xdr, Address, nativeToScVal, scValToNative, TransactionBuilder } from '@stellar/stellar-sdk';
 
-const RPC_URL = 'https://soroban-testnet.stellar.org';
-const NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
+const RPC_URL = 'https://rpc.testnet.minepi.com';
+const NETWORK_PASSPHRASE = 'Pi Testnet';
 
 const server = new rpc.Server(RPC_URL);
 
@@ -177,5 +177,33 @@ export async function createService(
     .setTimeout(30)
     .build();
 
+  return await submitTx(signer, tx);
+}
+
+// NEW: Server-signed subscription (for Pi Browser apps)
+export async function subscribeUser(
+  signer: (tx: any) => Promise<string>,
+  admin: string,
+  subscriber: string,
+  serviceId: string,
+  approvePeriods: number
+): Promise<string> {
+  const contract = new Contract(CONTRACT_IDS.subscription);
+  const account = await server.getAccount(admin);
+  const tx = new TransactionBuilder(account, {
+    fee: '100000',
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call(
+        'subscribe_user',
+        new Address(admin).toScVal(),
+        new Address(subscriber).toScVal(),
+        nativeToScVal(serviceId, { type: 'symbol' }),
+        nativeToScVal(approvePeriods, { type: 'u32' })
+      )
+    )
+    .setTimeout(30)
+    .build();
   return await submitTx(signer, tx);
 }

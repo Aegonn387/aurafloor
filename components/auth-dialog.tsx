@@ -215,7 +215,8 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         accessToken: authResult.accessToken,
         dname: verifiedData.user.username,
         piaddr,
-        role: role
+        role: role,
+        subscription: undefined
       })
 
       onOpenChange(false)

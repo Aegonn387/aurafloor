@@ -3,6 +3,64 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 import { queryWithRetry, sql } from '@/lib/db';
 
+function formatTimeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+// GET: Fetch comments for a post
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const postId = searchParams.get('postId');
+
+    if (!postId) {
+      return NextResponse.json({ error: 'Missing postId' }, { status: 400 });
+    }
+
+    const comments = await queryWithRetry(() => sql`
+      SELECT
+        pc.id,
+        pc.content,
+        pc.created_at,
+        pc.like_count,
+        u.id as author_id,
+        u.dname as author_name,
+        u.piuser as author_username
+      FROM post_comments pc
+      LEFT JOIN u ON pc.author_id = u.id
+      WHERE pc.post_id = ${postId}
+      ORDER BY pc.created_at ASC
+    `);
+
+    const formatted = comments.map(comment => ({
+      id: comment.id,
+      author: comment.author_name || comment.author_username || 'Unknown',
+      authorId: comment.author_id,
+      content: comment.content,
+      timestamp: formatTimeAgo(comment.created_at),
+      likes: Number(comment.like_count) || 0,
+      liked: false
+    }));
+
+    return NextResponse.json({ comments: formatted });
+  } catch (error) {
+    console.error('Failed to fetch comments:', error);
+    return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
+  }
+}
+
+// POST: Add a comment
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -39,8 +97,9 @@ export async function POST(request: NextRequest) {
       liked: false,
     };
 
-    return NextResponse.json({ comment: newComment });
+    return NextResponse.json(newComment);
   } catch (error) {
+    console.error('Failed to add comment:', error);
     return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 });
   }
 }

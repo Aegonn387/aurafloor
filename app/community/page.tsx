@@ -83,7 +83,7 @@ export default function CommunityPage() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/community/posts');
+      const response = await fetch("/api/community/posts?uid=" + (user?.piuser || ""));
       if (response.ok) {
         const data = await response.json();
         const postsArray = data.posts || [];
@@ -317,6 +317,7 @@ export default function CommunityPage() {
     }
   };
 
+
   const handleLike = async (postId: string) => {
     if (!user?.piuser) {
       alert("Please sign in to like posts");
@@ -328,7 +329,7 @@ export default function CommunityPage() {
       if (!post) return;
       const wasLiked = post.liked;
       // Optimistic update
-      setPosts(posts.map(p => {
+      setPosts(prev => prev.map(p => {
         if (p.id === postId) {
           return {
             ...p,
@@ -344,8 +345,8 @@ export default function CommunityPage() {
         body: JSON.stringify({ uid: user.piuser })
       });
       if (!response.ok) {
-        // Revert on error
-        setPosts(posts.map(p => {
+        // Revert on error using functional update
+        setPosts(prev => prev.map(p => {
           if (p.id === postId) {
             return {
               ...p,
@@ -355,6 +356,9 @@ export default function CommunityPage() {
           }
           return p;
         }));
+      } else {
+        // Refresh posts to sync with server
+        await fetchPosts();
       }
     } catch (error) {
       console.error("Failed to like post:", error);

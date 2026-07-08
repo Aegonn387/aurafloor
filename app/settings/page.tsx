@@ -1,4 +1,5 @@
 ﻿"use client"
+const PI = 'u03C0'
 
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -16,7 +17,8 @@ import { useTheme } from "next-themes"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 export default function SettingsPage() {
-  const user = useStore((state) => state.user)
+  const user = useStore((state) => state.user);
+  const setUser = useStore((state) => state.setUser);
   const fontSize = useStore((state) => state.fontSize)
   const animations = useStore((state) => state.animations)
   const setFontSize = useStore((state) => state.setFontSize)
@@ -73,9 +75,29 @@ export default function SettingsPage() {
   }, [user])
 
   const handleCancelSubscription = async () => {
-    setIsCancelling(true)
-    setTimeout(() => { setIsCancelling(false); setCancelDialogOpen(false) }, 1500)
-  }
+    if (!user?.piaddr) return;
+    setIsCancelling(true);
+    try {
+      const res = await fetch("/api/subscriptions/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_pi_address: user.piaddr })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSubscription({ tier: "free", status: "active" });
+        if (user) setUser({ ...user, subscription: { tier: "free" } });
+        setCancelDialogOpen(false);
+      } else {
+        alert(data.error || "Failed to cancel subscription");
+      }
+    } catch (err) {
+      console.error("Cancel failed:", err);
+      alert("Failed to cancel subscription");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const handleDataExport = async () => {
     alert("Data export feature coming soon. You will receive an email with your data.")
@@ -134,7 +156,7 @@ export default function SettingsPage() {
                                 {subscription?.status || 'Active'}
                               </Badge>
                               <span className="text-xs sm:text-sm text-muted-foreground">
-                                {isPaid ? `${subscription?.price_pi || 0} π per month` : 'Free'}
+                                {isPaid ? `${subscription?.price_pi || 0} ${PI} per month` : 'Free'}
                               </span>
                             </div>
                           </div>
@@ -159,7 +181,7 @@ export default function SettingsPage() {
                               <>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Total Paid</span>
-                                  <span>{subscription?.total_paid || 0} π</span>
+                                  <span>{subscription?.total_paid || 0} ${PI}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Payment Method</span>
