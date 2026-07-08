@@ -28,9 +28,8 @@ export function usePiPayment(): UsePiPaymentReturn {
     setError(null)
 
     try {
-      // Ensure we have the payments scope before creating payment
-      // Pi SDK will silently use existing auth if scope already granted
-      await window.Pi.authenticate(["username", "payments"], (payment: any) => {
+      // Ensure we have the necessary scopes: wallet_address is needed for subscriptions
+      await window.Pi.authenticate(["username", "payments", "wallet_address"], (payment: any) => {
         console.log("[Payment] Incomplete payment found during auth:", payment)
       })
 
