@@ -60,13 +60,14 @@ async function getAudioForToken(tokenId: string): Promise<string | null> {
 async function getTokenMetadata(tokenId: string): Promise<any> {
   try {
     const nfts = await sql`
-      SELECT title as "name", descr as "description", cipfs as "coverCID", 
+      SELECT title as "name", descr as "description", category, cipfs as "coverCID", 
              etype as "editionType", ted as "totalEditions"
       FROM n WHERE bnid = ${tokenId} LIMIT 1
     `
     if (nfts.length > 0) {
       return {
         name: nfts[0].name || `Audio NFT #${tokenId}`,
+        category: nfts[0].category || "Other",
         description: nfts[0].description || 'Unique audio on Stellar',
         image: nfts[0].coverCID ? `https://gateway.pinata.cloud/ipfs/${nfts[0].coverCID}` : '/default-cover.jpg',
       }

@@ -9,6 +9,9 @@ export interface ModerationAssignment {
   title: string
   status: string
   risk_score: number
+  audio_url?: string
+  transcript?: string
+  flagged_categories?: string[]
 }
 
 export function useModeration(moderatorAddress: string) {

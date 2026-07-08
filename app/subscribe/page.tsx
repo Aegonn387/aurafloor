@@ -8,12 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Sparkles, TrendingUp, Zap, Loader2 } from "lucide-react"
 import { useStore } from "@/lib/store"
-import { useRouter } from "next/navigation"
+import { AuthDialog } from "@/components/auth-dialog"
 import { SUBSCRIPTION_TIERS, getTiersByRole, type TierConfig } from "@/lib/subscription-config"
 import { usePiPayment } from "@/hooks/usePiPayment"
 import { getPublicKey } from "@/lib/wallet"
 
-// Map tier IDs to service symbols (must match those registered on the contract)
 const tierToServiceId: Record<string, string> = {
   'collector_free': 'CFREE',
   'collector_basic': 'CBASIC',
@@ -24,10 +23,10 @@ const tierToServiceId: Record<string, string> = {
 }
 
 export default function SubscribePage() {
-  const router = useRouter()
   const user = useStore((state) => state.user)
   const [loading, setLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [showAuth, setShowAuth] = useState(false)
 
   const collectorTiers = getTiersByRole('collector')
   const creatorTiers = getTiersByRole('creator')
@@ -35,19 +34,20 @@ export default function SubscribePage() {
   const { createPayment } = usePiPayment()
 
   const handleSubscribe = async (tier: TierConfig) => {
+    if (!user) {
+      setShowAuth(true)
+      return
+    }
+
     setLoading(true)
     setSelectedPlan(tier.id)
     try {
-      if (!user) { router.push("/auth"); return }
-
-      // Get user's wallet address
       const walletAddress = await getPublicKey()
       if (!walletAddress) throw new Error('Wallet not connected')
 
       const serviceId = tierToServiceId[tier.id]
       if (!serviceId) throw new Error(`No service mapping for tier ${tier.id}`)
 
-      // Step 1: Pay via Pi Browser native payment
       const pid = await createPayment({
         amount: tier.pricePi,
         memo: `Subscribe to ${tier.name}`,
@@ -55,7 +55,6 @@ export default function SubscribePage() {
       })
       if (!pid) throw new Error('Payment was cancelled or failed')
 
-      // Step 2: Call backend to complete subscription on smart contract
       const res = await fetch('/.netlify/functions/complete-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,6 +194,7 @@ export default function SubscribePage() {
         </Card>
       </main>
       <MobileNav />
+      <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
     </div>
   )
 }
