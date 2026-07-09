@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing postId' }, { status: 400 });
     }
 
+    // FIX: Join on u.piuser (not u.id) since author_id stores piuser string
     const comments = await queryWithRetry(() => sql`
       SELECT
         pc.id,
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
         u.dname as author_name,
         u.piuser as author_username
       FROM post_comments pc
-      LEFT JOIN u ON pc.author_id = u.id
+      LEFT JOIN u ON pc.author_id = u.piuser
       WHERE pc.post_id = ${postId}
       ORDER BY pc.created_at ASC
     `);
@@ -70,9 +71,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
+    // FIX: Lookup by piuser (not id) since uid is the piuser string
     const user = await queryWithRetry(() => sql`
-      SELECT dname, piuser FROM u WHERE id = ${uid} LIMIT 1
+      SELECT dname, piuser FROM u WHERE piuser = ${uid} LIMIT 1
     `);
+
     if (user.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }

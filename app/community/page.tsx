@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
@@ -18,7 +18,6 @@ import {
   Heart,
   MessageCircle,
   Share2,
-  Music2,
   Link2,
   Send,
   TrendingUp,
@@ -73,9 +72,13 @@ export default function CommunityPage() {
   const currentTrack = useStore((state) => state.currentTrack);
   const setCurrentTrack = useStore((state) => state.setCurrentTrack);
   const { toast } = useToast();
+
+  // FIX: Use uid as fallback since piuser may not be set for existing sessions
+  const userId = user?.piuser || user?.uid || "";
+
   useEffect(() => {
     fetchPosts();
-    if (user?.piuser) {
+    if (userId) {
       fetchUserNFTs();
     }
   }, [user]);
@@ -83,7 +86,7 @@ export default function CommunityPage() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/community/posts?uid=" + (user?.piuser || ""));
+      const response = await fetch("/api/community/posts?uid=" + userId);
       if (response.ok) {
         const data = await response.json();
         const postsArray = data.posts || [];
@@ -116,9 +119,10 @@ export default function CommunityPage() {
   };
 
   const fetchUserNFTs = async () => {
-    if (!user?.piuser) return;
+    if (!userId) return;
     try {
-      const response = await fetch(`/api/user/${user.piuser}/nfts`);
+      // FIX: Use userId (piuser/uid) for the API path
+      const response = await fetch(`/api/user/${userId}/nfts`);
       if (response.ok) {
         const data = await response.json();
         setUserNFTs(data);
@@ -161,7 +165,10 @@ export default function CommunityPage() {
   };
 
   const handleCreatePost = async () => {
-    if (!postContent.trim() || !user) return;
+    if (!postContent.trim() || !user || !userId) {
+      toast({ title: "Error", description: "Please sign in to create a post", variant: "destructive" });
+      return;
+    }
     setCreatingPost(true);
     try {
       const response = await fetch("/api/community/posts", {
@@ -170,7 +177,7 @@ export default function CommunityPage() {
         body: JSON.stringify({
           content: postContent,
           linkedNFTId: selectedNFT || null,
-          uid: user.piuser,
+          uid: userId,
         }),
       });
       if (response.ok) {
@@ -178,9 +185,9 @@ export default function CommunityPage() {
         const newPost = data.post || data;
         const postToAdd: Post = {
           id: newPost.id,
-          author: user.dname || user.piuser || "User",
-          authorId: user.piuser || "",
-          role: "collector",
+          author: user.dname || user.username || userId || "User",
+          authorId: userId,
+          role: (user.role as "creator" | "collector") || "collector",
           content: newPost.content,
           timestamp: "Just now",
           likes: 0,
@@ -200,11 +207,11 @@ export default function CommunityPage() {
         toast({ title: "Success", description: "Post created!" });
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create post");
+        toast({ title: "Error", description: error.error || "Failed to create post", variant: "destructive" });
       }
     } catch (error) {
       console.error("Failed to create post:", error);
-      alert("Failed to create post");
+      toast({ title: "Error", description: "Failed to create post", variant: "destructive" });
     } finally {
       setCreatingPost(false);
     }
@@ -217,14 +224,14 @@ export default function CommunityPage() {
   };
 
   const handleUpdatePost = async () => {
-    if (!editingPost || !editContent.trim() || !user) return;
+    if (!editingPost || !editContent.trim() || !user || !userId) return;
     try {
       const response = await fetch(`/api/community/posts/${editingPost.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: editContent,
-          uid: user.piuser,
+          uid: userId,
         }),
       });
       if (response.ok) {
@@ -236,11 +243,11 @@ export default function CommunityPage() {
         toast({ title: "Success", description: "Post updated!" });
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to update post");
+        toast({ title: "Error", description: error.error || "Failed to update post", variant: "destructive" });
       }
     } catch (error) {
       console.error("Failed to update post:", error);
-      alert("Failed to update post");
+      toast({ title: "Error", description: "Failed to update post", variant: "destructive" });
     }
   };
 
@@ -250,23 +257,23 @@ export default function CommunityPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deletingPostId || !user) return;
+    if (!deletingPostId || !user || !userId) return;
     try {
       const response = await fetch(`/api/community/posts/${deletingPostId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.piuser }),
+        body: JSON.stringify({ uid: userId }),
       });
       if (response.ok) {
         setPosts(posts.filter(p => p.id !== deletingPostId));
         toast({ title: "Success", description: "Post deleted." });
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to delete post");
+        toast({ title: "Error", description: error.error || "Failed to delete post", variant: "destructive" });
       }
     } catch (error) {
       console.error("Failed to delete post:", error);
-      alert("Failed to delete post");
+      toast({ title: "Error", description: "Failed to delete post", variant: "destructive" });
     } finally {
       setDeleteConfirmOpen(false);
       setDeletingPostId(null);
@@ -275,13 +282,16 @@ export default function CommunityPage() {
 
   const handleAddComment = async (postId: string) => {
     const content = commentInputs[postId]?.trim();
-    if (!content || !user) return;
+    if (!content || !user || !userId) {
+      toast({ title: "Error", description: "Please sign in to comment", variant: "destructive" });
+      return;
+    }
     setCommentingPosts(prev => new Set(prev).add(postId));
     try {
       const response = await fetch("/api/community/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId, content, uid: user.piuser }),
+        body: JSON.stringify({ postId, content, uid: userId }),
       });
       if (response.ok) {
         const newComment = await response.json();
@@ -289,8 +299,8 @@ export default function CommunityPage() {
           if (post.id === postId) {
             const commentToAdd: Comment = {
               id: newComment.id,
-              author: user.dname || user.piuser || "User",
-              authorId: user.piuser || "",
+              author: user.dname || user.username || userId || "User",
+              authorId: userId,
               content: newComment.content,
               timestamp: "Just now",
               likes: 0,
@@ -301,13 +311,14 @@ export default function CommunityPage() {
           return post;
         }));
         setCommentInputs({ ...commentInputs, [postId]: "" });
+        toast({ title: "Success", description: "Comment added!" });
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to add comment");
+        toast({ title: "Error", description: error.error || "Failed to add comment", variant: "destructive" });
       }
     } catch (error) {
       console.error("Failed to add comment:", error);
-      alert("Failed to add comment");
+      toast({ title: "Error", description: "Failed to add comment", variant: "destructive" });
     } finally {
       setCommentingPosts(prev => {
         const next = new Set(prev);
@@ -317,10 +328,9 @@ export default function CommunityPage() {
     }
   };
 
-
   const handleLike = async (postId: string) => {
-    if (!user?.piuser) {
-      alert("Please sign in to like posts");
+    if (!userId) {
+      toast({ title: "Authentication required", description: "Please sign in to like posts", variant: "destructive" });
       return;
     }
     setLikingPosts(prev => new Set(prev).add(postId));
@@ -342,7 +352,7 @@ export default function CommunityPage() {
       const response = await fetch(`/api/community/likes/${postId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: user.piuser })
+        body: JSON.stringify({ uid: userId })
       });
       if (!response.ok) {
         // Revert on error using functional update
@@ -399,10 +409,14 @@ export default function CommunityPage() {
     }
   };
 
+  // FIX: Guard against invalid dates
   const formatTimeAgo = (dateString: string) => {
+    if (!dateString || dateString === "Invalid Date") return "just now";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "just now";
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) return "just now";
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
@@ -428,6 +442,7 @@ export default function CommunityPage() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header />
@@ -460,7 +475,7 @@ export default function CommunityPage() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="content">What's on your mind?</Label>
+                    <Label htmlFor="content">What&apos;s on your mind?</Label>
                     <Textarea
                       id="content"
                       placeholder="Share your thoughts, updates, or latest creations..."
@@ -535,7 +550,9 @@ export default function CommunityPage() {
                   <CardHeader>
                     <div className="flex items-start gap-3">
                       <Avatar>
-                        <AvatarFallback className="bg-primary text-primary-foreground">{post.author[0]}</AvatarFallback>
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {post.author?.[0]?.toUpperCase() || "?"}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -563,7 +580,8 @@ export default function CommunityPage() {
                             <Flag className="w-4 h-4 mr-2" />
                             Report
                           </DropdownMenuItem>
-                          {user?.piuser === post.authorId && (
+                          {/* FIX: Compare authorId with userId for edit/delete permissions */}
+                          {userId && userId === post.authorId && (
                             <>
                               <DropdownMenuItem onClick={() => handleEditPost(post)}>
                                 <Pencil className="w-4 h-4 mr-2" />
@@ -640,7 +658,9 @@ export default function CommunityPage() {
                             {post.comments.map((comment) => (
                               <div key={comment.id} className="flex gap-2">
                                 <Avatar className="w-8 h-8">
-                                  <AvatarFallback className="bg-muted text-xs">{comment.author[0]}</AvatarFallback>
+                                  <AvatarFallback className="bg-muted text-xs">
+                                    {comment.author?.[0]?.toUpperCase() || "?"}
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
                                   <div className="bg-muted rounded-lg p-3">
@@ -748,8 +768,7 @@ export default function CommunityPage() {
           </DialogContent>
         </Dialog>
 
-        <MobileNav />
-
+        {/* FIX: Single TipModal, properly placed before MobileNav */}
         {selectedArtist && (
           <TipModal
             open={tipModalOpen}
@@ -759,6 +778,7 @@ export default function CommunityPage() {
           />
         )}
 
+        {/* ReportModal */}
         {reportData && (
           <ReportModal
             open={reportModalOpen}
@@ -768,6 +788,8 @@ export default function CommunityPage() {
             contentTitle={reportData.title}
           />
         )}
+
+        <MobileNav />
       </main>
     </div>
   );

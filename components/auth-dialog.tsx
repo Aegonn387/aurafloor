@@ -18,7 +18,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     const initializePi = async () => {
       try {
         setSdkError(null)
-
         if (typeof window !== "undefined" && window.Pi) {
           console.log("[Pi SDK] Already loaded, initializing...")
           try {
@@ -34,12 +33,10 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           }
           return
         }
-
         console.log("[Pi SDK] Loading script...")
         const script = document.createElement("script")
         script.src = "https://sdk.minepi.com/pi-sdk.js"
         script.async = true
-
         script.onload = () => {
           console.log("[Pi SDK] Script loaded, initializing...")
           setTimeout(() => {
@@ -61,19 +58,16 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             }
           }, 100)
         }
-
         script.onerror = (error) => {
           console.error("[Pi SDK] Failed to load script:", error)
           setSdkError("Failed to load Pi SDK. Please check your connection.")
         }
-
         document.head.appendChild(script)
       } catch (error) {
         console.error("[Pi SDK] Initialization error:", error)
         setSdkError("Error initializing Pi SDK")
       }
     }
-
     if (open) {
       initializePi()
     }
@@ -83,9 +77,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     const baseUrl = isLocalhost ? "http://localhost:8888" : ""
     const functionUrl = `${baseUrl}/.netlify/functions/verify-pi-user`
-
     console.log("[Verify] Calling:", functionUrl)
-
     try {
       const verificationResponse = await fetch(functionUrl, {
         method: "POST",
@@ -95,16 +87,13 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         },
         body: JSON.stringify({ accessToken })
       })
-
       console.log("[Verify] Status:", verificationResponse.status)
       const responseText = await verificationResponse.text()
       console.log("[Verify] Response:", responseText.substring(0, 200))
-
       if (!verificationResponse.ok) {
         console.error("[Verify] Error response:", responseText)
         throw new Error(`Server error: ${verificationResponse.status}`)
       }
-
       try {
         return JSON.parse(responseText)
       } catch (parseError) {
@@ -120,21 +109,17 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const completeIncompletePayment = async (payment: any) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     const baseUrl = isLocalhost ? "http://localhost:8888" : ""
-    
     console.log("[Auth] Completing incomplete payment:", payment.identifier)
-    
     const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payment }),
     })
-    
     if (!res.ok) {
       const err = await res.text()
       console.error("[Auth] Incomplete payment completion failed:", err)
       throw new Error(`Failed to complete pending payment: ${err}`)
     }
-    
     console.log("[Auth] Incomplete payment completed successfully")
     return await res.json()
   }
@@ -142,30 +127,23 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const handleConnect = async () => {
     setLoading(true)
     setSdkError(null)
-
     try {
       if (!window.Pi) {
         throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
-
       if (!piInitialized) {
         throw new Error("Pi SDK not initialized yet. Please wait.")
       }
-
       console.log("[Auth] Starting Pi authentication...")
-
       const scopes = ["username", "payments", "wallet_address"]
       const onIncompletePaymentFound = async (payment: any) => {
         console.log("[Auth] Incomplete payment found:", payment)
         return await completeIncompletePayment(payment)
       }
-
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Auth] Success:", authResult.user)
-
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Auth] User verified:", verifiedData.user)
-
       setStep("role")
     } catch (error: any) {
       console.error("[Auth] Failed:", error)
@@ -180,30 +158,23 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const handleRoleSelect = async (role: "creator" | "collector") => {
     setLoading(true)
     setSdkError(null)
-
     try {
       if (!window.Pi) {
         throw new Error("Pi SDK not available. Please use Pi Browser.")
       }
-
       if (!piInitialized) {
         throw new Error("Pi SDK not initialized yet. Please wait.")
       }
-
       console.log("[Role] Authenticating for role:", role)
-
       const scopes = ["username", "payments", "wallet_address"]
       const onIncompletePaymentFound = async (payment: any) => {
         console.log("[Role] Incomplete payment found:", payment)
         return await completeIncompletePayment(payment)
       }
-
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Role] Auth success:", authResult.user)
-
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Role] User verified:", verifiedData.user)
-
       let piaddr: string | undefined = authResult.user?.piaddr
       if (!piaddr) {
         try {
@@ -212,7 +183,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           console.warn("[Role] No Pi wallet address available yet:", walletError)
         }
       }
-
       try {
         const syncResponse = await fetch('/.netlify/functions/sync-user', {
           method: 'POST',
@@ -232,11 +202,14 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         console.error("[Role] User sync request failed:", syncError)
       }
 
+      // FIX: Added piuser field so community page can use it for API calls
+      const piUsername = verifiedData.user.username || verifiedData.user.uid
       setUser({
         uid: verifiedData.user.uid,
-        username: verifiedData.user.username || verifiedData.user.uid,
+        username: piUsername,
         accessToken: authResult.accessToken,
-        dname: verifiedData.user.username,
+        dname: piUsername,
+        piuser: verifiedData.user.uid,        // ← FIXED: was missing
         piaddr,
         role: role,
         subscription: undefined
@@ -276,7 +249,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   Mint, collect, and trade exclusive audio NFTs using Pi cryptocurrency
                 </p>
               </div>
-
               <div className={`rounded-lg p-2.5 sm:p-3 text-xs ${sdkError ? 'bg-destructive/10 border border-destructive/20' : 'bg-muted'}`}>
                 <p className={`text-center ${sdkError ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {sdkError ? (
@@ -294,7 +266,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   )}
                 </p>
               </div>
-
               <Button
                 onClick={handleConnect}
                 disabled={loading || !piInitialized || !!sdkError}
@@ -333,7 +304,6 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   </div>
                 </div>
               </button>
-
               <button
                 onClick={() => handleRoleSelect("collector")}
                 disabled={loading || !piInitialized}
