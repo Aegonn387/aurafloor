@@ -101,8 +101,8 @@ export default function ProfilePage() {
 
   // Copy wallet to clipboard
   const copyWallet = async () => {
-    if (user?.piuser) {
-      await navigator.clipboard.writeText(user.piuser)
+    if (user?.piaddr) {
+      await navigator.clipboard.writeText(user.piaddr)
       // You could add a toast here
     }
   }
@@ -137,9 +137,9 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">@{user?.dname || user?.piuser?.toLowerCase() || "guest"}</p>
-                {user?.piuser && (
+                {user?.piaddr && (
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-xs font-mono bg-muted/50 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
-                    <span>{user.piuser.slice(0,6)}...{user.piuser.slice(-4)}</span>
+                    <span>{user.piaddr.slice(0,6)}...{user.piaddr.slice(-4)}</span>
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={copyWallet}>
                       <Copy className="h-3 w-3" />
                     </Button>

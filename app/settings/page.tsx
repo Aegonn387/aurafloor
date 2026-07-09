@@ -1,5 +1,5 @@
 ﻿"use client"
-const PI = 'u03C0'
+const PI = '\u03C0'
 
 import { Header } from "@/components/header"
 import { MobileNav } from "@/components/mobile-nav"
@@ -156,7 +156,7 @@ export default function SettingsPage() {
                                 {subscription?.status || 'Active'}
                               </Badge>
                               <span className="text-xs sm:text-sm text-muted-foreground">
-                                {isPaid ? `${subscription?.price_pi || 0} ${PI} per month` : 'Free'}
+                                {isPaid ? `${subscription?.price_pi || 0} {PI} per month` : 'Free'}
                               </span>
                             </div>
                           </div>
@@ -181,7 +181,7 @@ export default function SettingsPage() {
                               <>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Total Paid</span>
-                                  <span>{subscription?.total_paid || 0} ${PI}</span>
+                                  <span>{subscription?.total_paid || 0} {PI}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Payment Method</span>

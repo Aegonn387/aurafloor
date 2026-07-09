@@ -204,11 +204,13 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Role] User verified:", verifiedData.user)
 
-      let piaddr: string | undefined
-      try {
-        piaddr = await getPublicKey()
-      } catch (walletError) {
-        console.warn("[Role] No Pi wallet address available yet:", walletError)
+      let piaddr: string | undefined = authResult.user?.piaddr
+      if (!piaddr) {
+        try {
+          piaddr = await getPublicKey()
+        } catch (walletError) {
+          console.warn("[Role] No Pi wallet address available yet:", walletError)
+        }
       }
 
       try {
