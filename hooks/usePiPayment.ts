@@ -31,28 +31,10 @@ export function usePiPayment(): UsePiPaymentReturn {
       const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       const baseUrl = isLocalhost ? "http://localhost:8888" : ""
 
-      // Authenticate with payments scope before creating payment
-      // This also handles any incomplete payments
-      await window.Pi.authenticate(["username", "payments", "wallet_address"], async (payment: any) => {
-        console.log("[Payment] Incomplete payment found:", payment)
-        const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payment }),
-        })
-        if (!res.ok) {
-          const err = await res.text()
-          console.error("Incomplete payment completion failed:", err)
-          throw new Error(`Failed to complete pending payment: ${err}`)
-        }
-        console.log("[Payment] Incomplete payment completed")
-        return await res.json()
-      })
-
       const callbacks = {
         onReadyForServerApproval: async (paymentId: string) => {
-          console.log("[Payment] Server approval needed:", paymentId)
-          const res = await fetch(`${baseUrl}/.netlify/functions/approve-payment`, {
+          console.log("[Payment] Server approval:", paymentId)
+          const res = await fetch(`${baseUrl}/api/payments/approve`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ paymentId }),
@@ -65,11 +47,15 @@ export function usePiPayment(): UsePiPaymentReturn {
         },
 
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          console.log("[Payment] Server completion needed:", paymentId, txid)
-          const res = await fetch(`${baseUrl}/.netlify/functions/complete-payment`, {
+          console.log("[Payment] Server completion:", paymentId, txid)
+          const res = await fetch(`${baseUrl}/api/complete-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ payment: { identifier: paymentId, transaction: { txid } } }),
+            body: JSON.stringify({
+              paymentId,
+              metadataCid: paymentData.metadata.metadataCid,
+              audioUrl: paymentData.metadata.audioUrl,
+            }),
           })
           if (!res.ok) {
             const err = await res.text()

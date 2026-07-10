@@ -1,14 +1,25 @@
-import * as StellarSdk from "@stellar/stellar-sdk";
+import { rpc, Keypair, Contract, TransactionBuilder, BASE_FEE, Address, nativeToScVal, scValToNative } from "@stellar/stellar-sdk";
+import { getBackendConfig, validatePiConfig, PI_CONFIG } from "../lib/pi-config";
 
-console.log("SDK version from package.json:", require("@stellar/stellar-sdk/package.json").version);
-console.log("Keys containing 'Soroban' or 'Rpc':", Object.keys(StellarSdk).filter(k => k.includes("Soroban") || k.includes("Rpc")));
-console.log("StellarSdk.Soroban exists:", !!StellarSdk.Soroban);
-console.log("StellarSdk.Rpc exists:", !!StellarSdk.Rpc);
+const stellarVersion = require("@stellar/stellar-sdk/package.json").version;
 
-if (StellarSdk.Soroban) {
-  console.log("Soroban keys:", Object.keys(StellarSdk.Soroban));
-}
+console.log("Stellar SDK:", stellarVersion);
+console.log("Pi network:", PI_CONFIG.network);
+console.log("Pi API version:", PI_CONFIG.apiVersion);
 
-if (StellarSdk.Rpc) {
-  console.log("Rpc keys:", Object.keys(StellarSdk.Rpc));
-}
+const configCheck = validatePiConfig();
+console.log("Config valid:", configCheck.valid);
+if (!configCheck.valid) console.log("Errors:", configCheck.errors);
+
+const backend = getBackendConfig();
+console.log("Base URL:", backend.baseUrl);
+console.log("Auth header:", !!backend.headers.Authorization);
+
+const exports = { rpc, Keypair, Contract, TransactionBuilder, BASE_FEE, Address, nativeToScVal, scValToNative };
+Object.entries(exports).forEach(([name, val]) => {
+  console.log(`${name}:`, typeof val !== "undefined" ? "OK" : "MISSING");
+});
+
+console.log("App ID:", PI_CONFIG.appId ? "SET" : "NOT SET");
+console.log("API Key:", PI_CONFIG.apiKey ? "SET" : "NOT SET");
+console.log("Passphrase:", PI_CONFIG.contractConfig.networkPassphrase);

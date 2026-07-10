@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         u.avatar as author_avatar,
         u.role as author_role
       FROM community_posts cp
-      LEFT JOIN u ON cp.author_id = u.id
+      LEFT JOIN u ON cp.author_id = u.piuser
       ORDER BY cp.created_at DESC
       LIMIT 50
     `);
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           u.dname as author_name,
           u.piuser as author_username
         FROM post_comments pc
-        LEFT JOIN u ON pc.author_id = u.id
+        LEFT JOIN u ON pc.author_id = u.piuser
         WHERE pc.post_id = ANY(${postIds})
         ORDER BY pc.created_at ASC
       `);
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await queryWithRetry(() => sql`
-      SELECT id, dname, piuser FROM u WHERE id = ${uid} LIMIT 1
+      SELECT id, dname, piuser FROM u WHERE piuser = ${uid} LIMIT 1
     `);
     if (user.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 });

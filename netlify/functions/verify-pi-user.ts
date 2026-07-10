@@ -1,4 +1,5 @@
 import { Handler } from '@netlify/functions'
+import { getBackendConfig, validatePiConfig } from '../../lib/pi-config'
 
 export const handler: Handler = async (event) => {
   // CORS preflight
@@ -25,6 +26,23 @@ export const handler: Handler = async (event) => {
     }
   }
 
+  // Validate Pi config before making any calls
+  const configCheck = validatePiConfig()
+  if (!configCheck.valid) {
+    console.error('[Pi Verification] Config errors:', configCheck.errors)
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({
+        error: 'Server configuration error',
+        details: configCheck.errors,
+      }),
+    }
+  }
+
   try {
     const body = JSON.parse(event.body || '{}')
     const { accessToken } = body
@@ -40,18 +58,25 @@ export const handler: Handler = async (event) => {
       }
     }
 
-    // Call official Pi API to verify the user token
-    const piResponse = await fetch('https://api.minepi.com/v2/me', {
+    const backend = getBackendConfig()
+
+    // 2026: Use Key auth (not Bearer) and explicit network base URL
+    const piResponse = await fetch(`${backend.baseUrl}/me`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        'Authorization': backend.headers.Authorization,
         'Content-Type': 'application/json',
       },
     })
 
     if (!piResponse.ok) {
       const errorText = await piResponse.text()
-      console.error('[Pi Verification] Pi API error:', errorText)
+      console.error('[Pi Verification] Pi API error:', {
+        status: piResponse.status,
+        statusText: piResponse.statusText,
+        body: errorText,
+        endpoint: backend.baseUrl,
+      })
       return {
         statusCode: 401,
         headers: {
@@ -67,7 +92,7 @@ export const handler: Handler = async (event) => {
 
     const piUser = await piResponse.json()
 
-    // Return only essential user data
+    // 2026: Return wallet_address too — required for NFT minting
     return {
       statusCode: 200,
       headers: {
@@ -78,7 +103,8 @@ export const handler: Handler = async (event) => {
         success: true,
         user: {
           uid: piUser.uid,
-          username: piUser.username || `PiUser_${piUser.uid.slice(-4)}`,
+          username: piUser.username || `PiUser_${piUser.uid?.slice(-4) || 'xxxx'}`,
+          wallet_address: piUser.wallet_address || null,
         },
       }),
     }

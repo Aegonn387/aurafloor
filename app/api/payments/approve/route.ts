@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getBackendConfig, validatePiConfig } from '@/lib/pi-config'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,26 +17,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get Pi API key from environment
-    const piApiKey = process.env.PI_API_KEY
-    if (!piApiKey) {
-      console.error('[Payment] PI_API_KEY not configured')
+    const configCheck = validatePiConfig()
+    if (!configCheck.valid) {
+      console.error('[Payment] Config errors:', configCheck.errors)
       return NextResponse.json(
-        { error: 'Server configuration error' },
+        { error: 'Server configuration error', details: configCheck.errors },
         { status: 500 }
       )
     }
 
-    // Approve the payment with Pi Network API
-    const piApiUrl = `https://api.minepi.com/v2/payments/${paymentId}/approve`
-    console.log('[Payment] Calling Pi API:', piApiUrl)
+    const backend = getBackendConfig()
 
-    const piResponse = await fetch(piApiUrl, {
+    const piResponse = await fetch(`${backend.baseUrl}/payments/${paymentId}/approve`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Key ${piApiKey}`,
-        'Content-Type': 'application/json'
-      }
+      headers: backend.headers,
     })
 
     console.log('[Payment] Pi API status:', piResponse.status)
@@ -44,10 +39,7 @@ export async function POST(request: NextRequest) {
       const errorText = await piResponse.text()
       console.error('[Payment] Pi API error:', errorText)
       return NextResponse.json(
-        {
-          error: 'Failed to approve payment',
-          details: errorText
-        },
+        { error: 'Failed to approve payment', details: errorText },
         { status: piResponse.status }
       )
     }
@@ -58,14 +50,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       paymentId,
-      ...approvalData
+      ...approvalData,
     })
   } catch (error) {
     console.error('[Payment] Error:', error)
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )

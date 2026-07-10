@@ -14,22 +14,27 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [piInitialized, setPiInitialized] = useState(false)
   const [sdkError, setSdkError] = useState<string | null>(null)
 
+  const PI_APP_ID = process.env.NEXT_PUBLIC_PI_APP_ID || "aurafloorbaaacb4132"
+  const PI_NETWORK = process.env.NEXT_PUBLIC_PI_NETWORK || "testnet"
+
   useEffect(() => {
     const initializePi = async () => {
       try {
         setSdkError(null)
         if (typeof window !== "undefined" && window.Pi) {
-          console.log("[Pi SDK] Already loaded, initializing...")
+          console.log("[Pi SDK] Already loaded, initializing with 2026 testnet config...")
           try {
             window.Pi.init({
-              version: "2.0",
-              sandbox: process.env.NODE_ENV === "development"
+              apiVersion: "v2",
+              network: PI_NETWORK,
+              appId: PI_APP_ID,
+              scopes: ["username", "payments", "wallet_address"],
             })
             setPiInitialized(true)
-            console.log("[Pi SDK] Initialized successfully")
+            console.log("[Pi SDK] Initialized successfully (2026 testnet)")
           } catch (initError) {
             console.error("[Pi SDK] Init error:", initError)
-            setPiInitialized(true)
+            setSdkError("Pi SDK init failed: " + (initError as Error).message)
           }
           return
         }
@@ -38,19 +43,21 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         script.src = "https://sdk.minepi.com/pi-sdk.js"
         script.async = true
         script.onload = () => {
-          console.log("[Pi SDK] Script loaded, initializing...")
+          console.log("[Pi SDK] Script loaded, initializing with 2026 testnet config...")
           setTimeout(() => {
             if (window.Pi) {
               try {
                 window.Pi.init({
-                  version: "2.0",
-                  sandbox: process.env.NODE_ENV === "development"
+                  apiVersion: "v2",
+                  network: PI_NETWORK,
+                  appId: PI_APP_ID,
+                  scopes: ["username", "payments", "wallet_address"],
                 })
                 setPiInitialized(true)
-                console.log("[Pi SDK] Initialized successfully")
+                console.log("[Pi SDK] Initialized successfully (2026 testnet)")
               } catch (initError) {
                 console.error("[Pi SDK] Init error:", initError)
-                setPiInitialized(true)
+                setSdkError("Pi SDK init failed: " + (initError as Error).message)
               }
             } else {
               console.error("[Pi SDK] Pi object not available after script load")
@@ -71,7 +78,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     if (open) {
       initializePi()
     }
-  }, [open])
+  }, [open, PI_APP_ID, PI_NETWORK])
 
   const verifyPiUser = async (accessToken: string) => {
     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -83,9 +90,9 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json"
+          "Accept": "application/json",
         },
-        body: JSON.stringify({ accessToken })
+        body: JSON.stringify({ accessToken }),
       })
       console.log("[Verify] Status:", verificationResponse.status)
       const responseText = await verificationResponse.text()
@@ -142,8 +149,10 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       }
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Auth] Success:", authResult.user)
+
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Auth] User verified:", verifiedData.user)
+
       setStep("role")
     } catch (error: any) {
       console.error("[Auth] Failed:", error)
@@ -173,16 +182,20 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       }
       const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound)
       console.log("[Role] Auth success:", authResult.user)
+
       const verifiedData = await verifyPiUser(authResult.accessToken)
       console.log("[Role] User verified:", verifiedData.user)
-      let piaddr: string | undefined = authResult.user?.piaddr
-      if (!piaddr) {
+
+      let walletAddress: string | undefined = authResult.user?.wallet_address
+
+      if (!walletAddress) {
         try {
-          piaddr = await getPublicKey()
+          walletAddress = await getPublicKey()
         } catch (walletError) {
           console.warn("[Role] No Pi wallet address available yet:", walletError)
         }
       }
+
       try {
         const syncResponse = await fetch('/.netlify/functions/sync-user', {
           method: 'POST',
@@ -190,8 +203,8 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           body: JSON.stringify({
             uid: verifiedData.user.uid,
             username: verifiedData.user.username || verifiedData.user.uid,
-            piaddr,
-            role
+            piaddr: walletAddress,
+            role,
           })
         })
         const syncData = await syncResponse.json()
@@ -202,17 +215,16 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         console.error("[Role] User sync request failed:", syncError)
       }
 
-      // FIX: Added piuser field so community page can use it for API calls
       const piUsername = verifiedData.user.username || verifiedData.user.uid
       setUser({
         uid: verifiedData.user.uid,
         username: piUsername,
         accessToken: authResult.accessToken,
         dname: piUsername,
-        piuser: verifiedData.user.uid,        // ← FIXED: was missing
-        piaddr,
+        piuser: verifiedData.user.uid,
+        piaddr: walletAddress,
         role: role,
-        subscription: undefined
+        subscription: undefined,
       })
 
       onOpenChange(false)
@@ -259,7 +271,7 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                   ) : piInitialized ? (
                     <span className="flex items-center justify-center gap-1.5 sm:gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                      Pi SDK Ready
+                      Pi SDK Ready (Testnet)
                     </span>
                   ) : (
                     <span>Loading Pi SDK...</span>

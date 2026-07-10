@@ -1,10 +1,25 @@
-﻿import { rpc, Transaction } from '@stellar/stellar-sdk';
+import { rpc, Transaction } from '@stellar/stellar-sdk';
 
 declare global {
   interface Window {
     Pi?: {
-      init: (options: { version: string; sandbox?: boolean }) => void;
-      authenticate: (scopes: string[], options?: any) => Promise<{ accessToken: string; user: { uid: string; piaddr: string; username?: string } }>;
+      init: (config: {
+        apiVersion: string;
+        network: string;
+        appId: string;
+        scopes: string[];
+      }) => void;
+      authenticate: (
+        scopes: string[],
+        onIncompletePaymentFound: (payment: any) => Promise<any>
+      ) => Promise<{
+        user: {
+          uid: string;
+          username: string;
+          wallet_address: string;
+        };
+        accessToken: string;
+      }>;
       createPayment: (
         data: { amount: number; memo: string; metadata: any },
         callbacks: {
@@ -28,7 +43,7 @@ export async function getPublicKey(): Promise<string> {
   return result.wallets[0]?.publicKey || '';
 }
 
-export async function signTransaction(tx: any): Promise<string> {
+export async function signTransaction(tx: Transaction): Promise<string> {
   if (!window.Pi) throw new Error('Pi SDK not loaded');
   const xdr = tx.toEnvelope().toXDR('base64');
   const result = await window.Pi.Wallet.submitTransaction(xdr);
